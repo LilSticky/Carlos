@@ -10,12 +10,12 @@ const lead = (sheets: Sheets) => buildCommands(sheets).find((c) => c.name === "l
 const subcommands = (sheets: Sheets) => lead(sheets)?.options?.map((o) => o.name);
 
 describe("buildCommands", () => {
-  it("offers only /iam, /whisper and /lead without links to the other sheets", () => {
-    expect(buildCommands({}).map((c) => c.name)).toEqual(["iam", "whisper", "lead"]);
+  it("offers only /iam, /whisper, /overlay and /lead without links to the other sheets", () => {
+    expect(buildCommands({}).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "lead"]);
   });
 
   it("puts /farms with Alliance Members, which keeps the list", () => {
-    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "farms", "lead"]);
+    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "lead"]);
   });
 
   it("lets /whisper take up to 10 pictures, the first one required", () => {
@@ -29,9 +29,9 @@ describe("buildCommands", () => {
 
   it("adds one member command per text of each linked sheet, and /lead last", () => {
     expect(buildCommands(all).map((c) => c.name)).toEqual([
-      "iam", "whisper", "farms", "player", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "lead",
+      "iam", "whisper", "overlay", "farms", "player", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "lead",
     ]);
-    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "events", "ad", "elixir", "lead"]);
+    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir", "lead"]);
   });
 
   it("puts /player with Alliance Statistics, where the cards come from", () => {
@@ -40,7 +40,7 @@ describe("buildCommands", () => {
   });
 
   it("gives member commands nothing to pick and no option to post; /ad only an optional tomorrow", () => {
-    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "player", "lead", "ad"].includes(c.name));
+    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "lead", "ad"].includes(c.name));
     expect(plain.map((c) => c.name)).toEqual(["farms", "schedule", "today", "rules", "driverguide", "events", "elixir", "kvk"]);
     for (const c of plain) {
       expect(c.options ?? []).toEqual([]);

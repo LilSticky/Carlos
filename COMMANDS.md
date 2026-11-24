@@ -21,6 +21,7 @@ with everything else.
 |---|---|---|
 | `/iam name` | Links your Discord account to your name on the member list (once) | upload `members` |
 | `/whisper picture …` | Sends screenshots privately to the Upload Inbox | upload `picture` |
+| `/overlay [off]` | Your personal connect code for the overlay app (a button over the game that sends a screenshot), or turns it off | Members `overlayKey`, `overlayRevoke` |
 | `/farms` | Untagged players with lots of resources; pick one to attack (cooldown), Gone? Retrace finds where it went | Members `farms`, `hit`, `retrace` |
 | `/me` | Your own card: this week's AD scores, donations, when you drive or guard | Coachman `search` for your linked name |
 | `/player name` | A player's combat card: squads, strength, intel from reports (members and other alliances) | Statistics `card`, `people` for autocomplete |

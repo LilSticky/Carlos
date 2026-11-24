@@ -1,5 +1,6 @@
 import type { ExportOutcome } from "../exports/exports.js";
 import type { IamOutcome } from "../members/iam.js";
+import type { OverlayOutcome } from "../overlay/overlay.js";
 import type { RecordingOutcome } from "../recordings/recording.js";
 import type { UploadOutcome } from "../uploads/upload.js";
 
@@ -111,3 +112,25 @@ export function recordingText(outcome: RecordingOutcome): string {
 
 export const LATER_TEXT = "No import for this event yet. Carlos asks again once the sheet can read a new kind of ranking.";
 export const SKIPPED_TEXT = "Left out: Carlos does not send this recording.";
+
+/** /overlay: the connect code is shown only here, only to the member. */
+export function overlayText(outcome: OverlayOutcome): string {
+  switch (outcome.kind) {
+    case "key":
+      return [
+        `Your overlay key, **${outcome.member}**. Paste this whole code into the overlay app once (Connect):`,
+        "```",
+        outcome.code,
+        "```",
+        "Keep it to yourself: it sends screenshots under your name. Any key you had before no longer works. Lost your phone? Use **/overlay** with **off: True**.",
+      ].join("\n");
+    case "revoked":
+      return outcome.had
+        ? `Your overlay key is off, **${outcome.member}**. Use **/overlay** for a new one.`
+        : `You had no overlay key, **${outcome.member}**. Use **/overlay** to get one.`;
+    case "who":
+      return "Who are you in the game? Tell Carlos once with **/iam**, then use **/overlay** again.";
+    case "failed":
+      return outcome.error;
+  }
+}

@@ -28,7 +28,8 @@ import { SheetError } from "../sheet/sheet.js";
 import type { UploadDeps } from "../uploads/upload.js";
 import { sendUpload } from "../uploads/upload.js";
 import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
-import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
+import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
+import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
 import { siegeButton, siegeNow, startSiegeBoard, type SiegeDeps } from "./siege-board.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost, type VideoDeps } from "./video-inbox.js";
@@ -124,8 +125,8 @@ async function autocomplete(interaction: AutocompleteInteraction, w: Wiring): Pr
     .catch(() => undefined);
 }
 
-/** Commands whose answer only the asker sees: linking, private screenshots and leadership. */
-const PRIVATE_COMMANDS: ReadonlySet<string> = new Set(["iam", "whisper", "lead"]);
+/** Commands whose answer only the asker sees: linking, private screenshots, overlay keys and leadership. */
+const PRIVATE_COMMANDS: ReadonlySet<string> = new Set(["iam", "whisper", "overlay", "lead"]);
 
 /**
  * Shows an error or refusal only to the asker. A public answer's placeholder is removed first, so the channel
@@ -150,6 +151,15 @@ async function command(interaction: ChatInputCommandInteraction, w: Wiring): Pro
     await interaction.editReply(iamText(outcome, w.config.uploadChannelId));
   } else if (name === "whisper") {
     await whisper(interaction, w);
+  } else if (name === "overlay") {
+    const outcome = await overlayKey(interaction.user.id, interaction.options.getBoolean("off") ?? false, {
+      memberOf: (id) => w.upload.memberOf(id),
+      callSheet: w.callSheet,
+      membersUrl: w.config.sheets.members,
+    });
+    if (outcome.kind === "key" || outcome.kind === "revoked") w.log(`/overlay ${outcome.kind} for ${outcome.member}.`);
+    if (outcome.kind === "failed") w.log(`/overlay ${interaction.user.id}: ${outcome.error}`);
+    await interaction.editReply(overlayText(outcome));
   } else if (name === "farms") {
     await farms(interaction, w);
   } else if (name === "player") {
