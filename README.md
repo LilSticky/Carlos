@@ -33,6 +33,41 @@ secret is the web app's `BOT_SECRET` script property, and Carlos's `SHEET_SECRET
 4. `npm ci`, `npm run build`, `npm start`. The slash commands are registered on the alliance server at
    every start.
 
+## Hosting on Wispbyte
+
+Every green push to `main` makes CI add one commit to the `deploy` branch, which holds only `dist/`, the runtime
+`package.json` and lockfile, and `build-info.json`. The server pulls it on every start.
+
+**Startup** settings:
+
+| Field | Value |
+|---|---|
+| Git Repo Address | `https://github.com/LilSticky/Carlos` |
+| Install Branch | `deploy` |
+| User Uploaded Files | `0` |
+| Auto Update | `1` |
+| JS file | `dist/main.js` |
+| Git Username / Git Access Token | empty (the repository is public) |
+
+**Environment**: the variables of `env.example`. Wispbyte writes them to `.env`, which Carlos reads.
+
+**First clone.** Wispbyte won't start an empty folder, and *Reinstall* does not clone. So once, in **Files**:
+delete everything, create `dist/main.js` with the following content, start the server, wait for `Bootstrap done`,
+then restart.
+
+```js
+// One-time Wispbyte bootstrap: turns the server folder into a checkout of the deploy branch.
+const { execFileSync } = require("node:child_process");
+const { rmSync } = require("node:fs");
+const git = (...args) => execFileSync("git", args, { stdio: "inherit" });
+rmSync("dist", { recursive: true, force: true });
+git("init", "-q");
+git("remote", "add", "origin", "https://github.com/LilSticky/Carlos");
+git("fetch", "-q", "origin", "deploy");
+git("checkout", "-q", "-b", "deploy", "--track", "origin/deploy");
+console.log("Bootstrap done: restart the server.");
+```
+
 ## Develop
 
 ```powershell
