@@ -49,10 +49,12 @@ Every green push to `main` makes CI add one commit to the `deploy` branch, which
 | JS file | `dist/main.js` |
 | Git Username / Git Access Token | empty (the repository is public) |
 
-**Environment**: the variables of `env.example`. Wispbyte writes them to `.env`, which Carlos reads.
+**Environment**: the variables of `env.example`. Wispbyte keeps them in `.env` in the server folder rather than
+exporting them, and Carlos reads that file at startup. Never delete `.env` in the file manager. If it is gone,
+create it there with one `NAME=value` line per variable.
 
 **First clone.** Wispbyte won't start an empty folder, and *Reinstall* does not clone. So once, in **Files**:
-delete everything, create `dist/main.js` with the following content, start the server, wait for `Bootstrap done`,
+delete everything except `.env`, create `dist/main.js` with the following content, start the server, wait for `Bootstrap done`,
 then restart.
 
 ```js
