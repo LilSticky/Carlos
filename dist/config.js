@@ -27,19 +27,16 @@ const schema = z.object({
     DISCORD_APP_ID: snowflake,
     GUILD_ID: snowflake,
     UPLOAD_CHANNEL_ID: snowflake,
-    SHEET_URL: z
-        .string()
-        .trim()
-        .regex(/^https:\/\/script\.google\.com\/\S+\/exec$/, "must be the /exec link of the Alliance upload web app"),
-    SHEET_SECRET: z.string().trim().min(24, "must be the BOT_SECRET of the upload web app (24 characters or more)"),
+    SHEET_SECRET: z.string().trim().min(24, "must be the BOT_SECRET of the sheets' web apps (24 characters or more)"),
     DATA_DIR: z.string().trim().min(1).default("data"),
     COACHMAN_URL: execLink.optional(),
     EVENTS_URL: execLink.optional(),
     KVK_URL: execLink.optional(),
     STATS_URL: execLink.optional(),
-    MEMBERS_URL: execLink.optional(),
+    MEMBERS_URL: execLink,
     SIEGE_URL: execLink.optional(),
     SIEGE_CHANNEL_ID: snowflake.optional(),
+    VIDEO_CHANNEL_ID: snowflake.optional(),
 });
 export function readConfig(env) {
     const blankless = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
@@ -62,11 +59,11 @@ export function readConfig(env) {
         appId: e.DISCORD_APP_ID,
         guildId: e.GUILD_ID,
         uploadChannelId: e.UPLOAD_CHANNEL_ID,
-        sheetUrl: e.SHEET_URL,
         sheetSecret: e.SHEET_SECRET,
         dataDir: e.DATA_DIR,
-        sheets,
+        sheets: { ...sheets, members: e.MEMBERS_URL },
         ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
+        ...(e.VIDEO_CHANNEL_ID ? { videoChannelId: e.VIDEO_CHANNEL_ID } : {}),
     };
 }
 //# sourceMappingURL=config.js.map

@@ -16,9 +16,23 @@ const answer = z.union([
     z.object({ ok: z.literal(false), error: z.string() }),
 ]);
 const names = z.array(z.string());
+const kindList = z.array(z.object({ key: z.string().min(1), label: z.string().min(1) }));
+const recordingStart = z.object({
+    id: z.string().min(1),
+    parts: z.number().int().positive(),
+    partBytes: z.number().int().positive(),
+    name: z.string().min(1),
+});
+function readable(schema, value) {
+    const parsed = schema.safeParse(value);
+    if (!parsed.success)
+        throw new SheetError("The alliance sheet sent an answer Carlos cannot read.", true);
+    return parsed.data;
+}
 /**
  * One call to a sheet's web app: { secret, action, ...extra } as JSON. Returns the answer when ok, else throws a
- * SheetError with the sheet's own text (or a setup problem). Used by the upload web app and by Bot.js in the sheets.
+ * SheetError with the sheet's own text (or a setup problem). Bot.js in the sheets takes { action, args } and
+ * answers { ok, result }.
  */
 export async function callWebApp(options, action, extra = {}) {
     const timeoutMs = options.timeoutMs ?? 90_000;
@@ -56,7 +70,14 @@ export async function callWebApp(options, action, extra = {}) {
     return parsed.data;
 }
 export function createSheet(options) {
-    const call = (action, extra = {}) => callWebApp(options, action, extra);
+    /** One Bot.js action of Alliance Members; returns its result. */
+    async function call(action, args = {}, timeoutMs) {
+        const body = await callWebApp(timeoutMs ? { ...options, timeoutMs } : options, action, { args });
+        const result = body["result"];
+        if (!result || typeof result !== "object")
+            throw new SheetError("The alliance sheet sent an answer Carlos cannot read.", true);
+        return result;
+    }
     async function list(action, field) {
         const parsed = names.safeParse((await call(action))[field]);
         if (!parsed.success)
@@ -75,6 +96,17 @@ export function createSheet(options) {
                 b64: Buffer.from(p.jpeg).toString("base64"),
             });
             return typeof body["member"] === "string" ? body["member"] : p.member;
+        },
+        async kinds() {
+            return readable(kindList, (await call("kinds"))["kinds"]);
+        },
+        async startRecording(r) {
+            const body = await call("recording", { name: r.member, kind: r.kind, size: r.size, mime: r.mime });
+            return readable(recordingStart, body);
+        },
+        async sendPart(id, index, bytes) {
+            // a part is 8 MiB: the sheet takes a minute at most, but give it room
+            await call("part", { id, index, b64: Buffer.from(bytes).toString("base64") }, options.timeoutMs ?? 300_000);
         },
     };
 }

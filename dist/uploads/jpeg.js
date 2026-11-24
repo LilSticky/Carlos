@@ -11,8 +11,8 @@ export async function toJpeg(bytes) {
         .toBuffer();
 }
 /** Downloads a Discord attachment, refusing anything bigger than `maxBytes`. */
-export async function download(url, maxBytes, fetch = globalThis.fetch) {
-    const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+export async function download(url, maxBytes, fetch = globalThis.fetch, timeoutMs = 60_000) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok)
         throw new Error(`download failed: HTTP ${res.status}`);
     const bytes = new Uint8Array(await res.arrayBuffer());

@@ -12,6 +12,7 @@ import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands
 import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
+import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost } from "./video-inbox.js";
 const NO_PINGS = { parse: [] };
 /**
  * Logs in, registers the slash commands on the alliance server (guild commands show up at once) and answers them,
@@ -28,6 +29,8 @@ export async function connect(w) {
         // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
         if (w.siege?.channelId)
             startSiegeBoard(ready, w.siege);
+        if (w.video)
+            void catchUpVideos(ready, w.video).catch((e) => w.log(`Video inbox catch-up failed: ${String(e)}`));
     });
     client.on(Events.InteractionCreate, (interaction) => {
         if (interaction.guildId !== w.config.guildId)
@@ -39,6 +42,9 @@ export async function connect(w) {
         }
         else if (interaction.isStringSelectMenu() && interaction.customId === FARM_MENU) {
             void pickFarm(interaction, w).catch((e) => w.log(`Farm menu failed: ${String(e)}`));
+        }
+        else if (interaction.isStringSelectMenu() && interaction.customId.startsWith(VIDEO_MENU) && w.video) {
+            void videoMenu(interaction, w.video).catch((e) => w.log(`Video menu failed: ${String(e)}`));
         }
         else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
             void retrace(interaction, w).catch((e) => w.log(`Retrace failed: ${String(e)}`));
@@ -57,6 +63,11 @@ export async function connect(w) {
         }
     });
     client.on(Events.MessageCreate, (message) => {
+        if (w.video && !message.author.bot && message.guildId === w.config.guildId && message.channelId === w.video.channelId) {
+            if (message.attachments.size)
+                void videoPost(message, w.video).catch((e) => w.log(`Video ${message.id} failed: ${String(e)}`));
+            return;
+        }
         if (message.author.bot || message.guildId !== w.config.guildId || message.channelId !== w.config.uploadChannelId)
             return;
         if (!message.attachments.size)
