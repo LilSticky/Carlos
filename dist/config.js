@@ -14,6 +14,7 @@ export const SHEET_SETTINGS = {
     events: "EVENTS_URL",
     kvk: "KVK_URL",
     stats: "STATS_URL",
+    members: "MEMBERS_URL",
 };
 const execLink = z
     .string()
@@ -35,6 +36,7 @@ const schema = z.object({
     EVENTS_URL: execLink.optional(),
     KVK_URL: execLink.optional(),
     STATS_URL: execLink.optional(),
+    MEMBERS_URL: execLink.optional(),
 });
 export function readConfig(env) {
     const blankless = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
