@@ -1,13 +1,18 @@
 import { Client, Events, GatewayIntentBits, MessageFlags, REST, Routes, } from "discord.js";
+import { findExport, runExport, toMessages } from "../exports/exports.js";
 import { assignName, claimName } from "../members/iam.js";
 import { suggestMembers } from "../members/members.js";
+import { readPlayers, searchAnswer } from "../search/player-card.js";
+import { SheetError } from "../sheet/sheet.js";
 import { sendUpload } from "../uploads/upload.js";
-import { commands } from "./commands.js";
-import { iamText, linkText, uploadText } from "./texts.js";
+import { buildCommands } from "./commands.js";
+import { exportText, iamText, linkText, uploadText } from "./texts.js";
+const EXPORT_COMMANDS = new Set(["coachman", "events", "kvk", "vote"]);
+const NO_PINGS = { parse: [] };
 /**
- * Logs in, registers the slash commands on the alliance server (guild commands show up at once) and answers:
- * /iam, /link, and screenshots posted in the upload channel. Reading attachments needs the Message Content
- * intent, switched on in the developer portal (Bot > Privileged Gateway Intents).
+ * Logs in, registers the slash commands on the alliance server (guild commands show up at once) and answers them,
+ * plus screenshots posted in the upload channel. Reading attachments needs the Message Content intent, switched on
+ * in the developer portal (Bot > Privileged Gateway Intents).
  */
 export async function connect(w) {
     const client = new Client({
@@ -22,8 +27,12 @@ export async function connect(w) {
             return;
         if (interaction.isAutocomplete())
             void autocomplete(interaction, w);
-        else if (interaction.isChatInputCommand())
-            void command(interaction, w).catch((e) => w.log(`/${interaction.commandName} failed: ${String(e)}`));
+        else if (interaction.isChatInputCommand()) {
+            void command(interaction, w).catch(async (e) => {
+                w.log(`/${interaction.commandName} failed: ${String(e)}`);
+                await interaction.editReply("Something went wrong. Please try again.").catch(() => undefined);
+            });
+        }
     });
     client.on(Events.MessageCreate, (message) => {
         if (message.author.bot || message.guildId !== w.config.guildId || message.channelId !== w.config.uploadChannelId)
@@ -33,7 +42,7 @@ export async function connect(w) {
         void upload(message, w).catch((e) => w.log(`Upload ${message.id} failed: ${String(e)}`));
     });
     const rest = new REST().setToken(w.config.discordToken);
-    await rest.put(Routes.applicationGuildCommands(w.config.appId, w.config.guildId), { body: commands });
+    await rest.put(Routes.applicationGuildCommands(w.config.appId, w.config.guildId), { body: buildCommands(w.config.sheets) });
     await client.login(w.config.discordToken);
     return client;
 }
@@ -48,20 +57,77 @@ async function autocomplete(interaction, w) {
 }
 async function command(interaction, w) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const name = interaction.options.getString("name", true);
-    if (interaction.commandName === "iam") {
-        const outcome = await claimName(interaction.user.id, name, w.iam);
+    const name = interaction.commandName;
+    if (name === "iam") {
+        const outcome = await claimName(interaction.user.id, interaction.options.getString("name", true), w.iam);
         if (outcome.kind === "linked")
             w.log(`${interaction.user.id} is ${outcome.member} (/iam).`);
         await interaction.editReply(iamText(outcome, w.config.uploadChannelId));
     }
-    else if (interaction.commandName === "link") {
+    else if (name === "link") {
         const user = interaction.options.getUser("user", true);
-        const outcome = await assignName(user.id, name, w.iam);
+        const outcome = await assignName(user.id, interaction.options.getString("name", true), w.iam);
         if (outcome.kind === "linked")
             w.log(`${user.id} is ${outcome.member} (/link by ${interaction.user.id}).`);
         await interaction.editReply(linkText(outcome, user.id));
     }
+    else if (name === "player") {
+        await player(interaction, w);
+    }
+    else if (EXPORT_COMMANDS.has(name)) {
+        await exportCommand(interaction, name, w);
+    }
+}
+async function player(interaction, w) {
+    const query = interaction.options.getString("name", true).trim();
+    let raw;
+    try {
+        raw = await w.callSheet("coachman", "search", { query });
+    }
+    catch (e) {
+        if (e instanceof SheetError && e.setup)
+            w.log(`/player: ${e.message}`);
+        await interaction.editReply(e instanceof SheetError ? e.message : "Something went wrong. Please try again.");
+        return;
+    }
+    const players = readPlayers(raw);
+    if (!players) {
+        w.log("/player: the Coachman Express sent an answer Carlos cannot read.");
+        await interaction.editReply("The sheet sent an answer Carlos cannot read.");
+        return;
+    }
+    const text = searchAnswer(players, query, players.length > 0 && (await w.isOfficer(interaction.user.id)));
+    await send(interaction, toMessages([text], false));
+}
+async function exportCommand(interaction, command, w) {
+    const def = findExport(command, interaction.options.getString("what"));
+    if (!def) {
+        await interaction.editReply("Pick one of the offered texts.");
+        return;
+    }
+    const post = interaction.options.getBoolean("post") ?? false;
+    let officer;
+    const isOfficer = () => (officer ??= w.isOfficer(interaction.user.id).catch(() => false));
+    const outcome = await runExport(def, { post, isOfficer }, w.callSheet);
+    if (outcome.kind === "failed" && outcome.setup)
+        w.log(`/${command} ${def.key}: ${outcome.error}`);
+    if (outcome.kind === "shown" && post)
+        w.log(`/${command} ${def.key} posted by ${interaction.user.id}.`);
+    await interaction.editReply(exportText(outcome));
+    if (outcome.kind !== "shown")
+        return;
+    // posted: plain text for everyone; shown to the asker: in-game texts in code blocks, easy to copy into the game
+    const messages = toMessages(outcome.parts, !post && !def.discord);
+    for (const content of messages) {
+        await interaction.followUp(post ? { content, allowedMentions: NO_PINGS } : { content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+    }
+}
+/** The first message as the deferred reply, the rest as follow-ups, all only for the asker. */
+async function send(interaction, messages) {
+    const [first, ...rest] = messages;
+    await interaction.editReply({ content: first ?? "Nothing to show.", allowedMentions: NO_PINGS });
+    for (const content of rest)
+        await interaction.followUp({ content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
 }
 async function upload(message, w) {
     const working = await message.react("⏳").catch(() => undefined);

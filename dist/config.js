@@ -8,6 +8,17 @@ export class ConfigError extends Error {
         this.name = "ConfigError";
     }
 }
+/** The setting that holds each sheet's /exec link. */
+export const SHEET_SETTINGS = {
+    coachman: "COACHMAN_URL",
+    events: "EVENTS_URL",
+    kvk: "KVK_URL",
+    stats: "STATS_URL",
+};
+const execLink = z
+    .string()
+    .trim()
+    .regex(/^https:\/\/script\.google\.com\/\S+\/exec$/, "must be the /exec link of the sheet's web app");
 const snowflake = z.string().trim().regex(/^\d{17,20}$/, "must be a Discord ID (17 to 20 digits)");
 const schema = z.object({
     DISCORD_TOKEN: z.string().trim().min(1, "is missing"),
@@ -20,6 +31,10 @@ const schema = z.object({
         .regex(/^https:\/\/script\.google\.com\/\S+\/exec$/, "must be the /exec link of the Alliance upload web app"),
     SHEET_SECRET: z.string().trim().min(24, "must be the BOT_SECRET of the upload web app (24 characters or more)"),
     DATA_DIR: z.string().trim().min(1).default("data"),
+    COACHMAN_URL: execLink.optional(),
+    EVENTS_URL: execLink.optional(),
+    KVK_URL: execLink.optional(),
+    STATS_URL: execLink.optional(),
 });
 export function readConfig(env) {
     const blankless = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
@@ -31,6 +46,12 @@ export function readConfig(env) {
         }));
     }
     const e = parsed.data;
+    const sheets = {};
+    for (const key of Object.keys(SHEET_SETTINGS)) {
+        const url = e[SHEET_SETTINGS[key]];
+        if (url)
+            sheets[key] = url;
+    }
     return {
         discordToken: e.DISCORD_TOKEN,
         appId: e.DISCORD_APP_ID,
@@ -39,6 +60,7 @@ export function readConfig(env) {
         sheetUrl: e.SHEET_URL,
         sheetSecret: e.SHEET_SECRET,
         dataDir: e.DATA_DIR,
+        sheets,
     };
 }
 //# sourceMappingURL=config.js.map
