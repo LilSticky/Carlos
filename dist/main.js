@@ -96,7 +96,8 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
         log(`${signal}: Carlos goes offline.`);
         void client.destroy().finally(() => {
             db.close();
-            process.exitCode = 0;
+            // timers (the siege board) and open requests would keep Node running, and Wispbyte waits for the exit
+            process.exit(0);
         });
     });
 }
