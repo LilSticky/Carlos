@@ -8,7 +8,8 @@ import { assignName, claimName } from "../members/iam.js";
 import { suggestMembers } from "../members/members.js";
 import { SheetError } from "../sheet/sheet.js";
 import { sendUpload } from "../uploads/upload.js";
-import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
+import { buildCommands, leadText, memberText, WHISPER_OPTIONS, wantsHelp } from "./commands.js";
+import { findHelp, helpDetails, helpOverview } from "./help.js";
 import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
 import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
@@ -109,6 +110,18 @@ async function fail(interaction, content) {
 }
 async function command(interaction, w) {
     const name = interaction.commandName;
+    if (name === "help") {
+        await help(interaction, w);
+        return;
+    }
+    const sub = interaction.options.getSubcommand(false);
+    const key = sub ? `${name} ${sub}` : name;
+    const given = sub ? (interaction.options.data[0]?.options ?? []) : interaction.options.data;
+    const entry = wantsHelp(key, given) ? findHelp(key) : undefined;
+    if (entry) {
+        await interaction.reply({ embeds: [helpDetails(entry)], flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+        return;
+    }
     // member commands that only show alliance texts or cards answer in the channel for everyone
     await interaction.deferReply(PRIVATE_COMMANDS.has(name) ? { flags: MessageFlags.Ephemeral } : {});
     if (name === "iam") {
@@ -146,6 +159,13 @@ async function command(interaction, w) {
         if (text)
             await showText(interaction, text, false, officerCheck(interaction, w), w);
     }
+}
+/** /help: one command in detail, or all of them; the /lead part only for R4 and R5. Only the asker sees it. */
+async function help(interaction, w) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const entry = findHelp(interaction.options.getString("command") ?? "");
+    const embed = entry ? helpDetails(entry) : helpOverview(w.config.sheets, await officerCheck(interaction, w)());
+    await interaction.editReply({ embeds: [embed], allowedMentions: NO_PINGS });
 }
 /** Asks once per command whether the asker is an R4 or R5. */
 function officerCheck(interaction, w) {
