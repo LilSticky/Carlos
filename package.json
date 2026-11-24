@@ -1,0 +1,19 @@
+{
+  "name": "carlos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Carlos, the Alliance Attendant: the Discord bot for one alliance's sheets in Last Asylum: Plague",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.6.7"
+  }
+}
