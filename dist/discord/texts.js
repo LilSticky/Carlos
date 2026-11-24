@@ -2,7 +2,7 @@
 export function iamText(outcome, uploadChannelId) {
     switch (outcome.kind) {
         case "linked":
-            return `Thanks, you are **${outcome.member}**. Post your screenshots in <#${uploadChannelId}>, up to 10 at once.`;
+            return `Thanks, you are **${outcome.member}**. Post your screenshots in <#${uploadChannelId}>, up to 10 at once, or send them with **/whisper** so only Carlos sees them.`;
         case "unchanged":
             return `You are already **${outcome.member}**.`;
         case "unknown":
@@ -34,13 +34,13 @@ export function exportText(outcome) {
 export function uploadText(outcome) {
     switch (outcome.kind) {
         case "not-linked":
-            return "Who are you in the game? Tell me once with **/iam**, then post your screenshots again.";
+            return "Who are you in the game? Tell me once with **/iam**, then send your screenshots again.";
         case "not-a-member":
             return `**${outcome.member}** is not on the member list any more. Pick your name again with **/iam**, or ask an officer.`;
         case "no-pictures":
             return undefined; // a chat line in the channel: say nothing
         case "unreadable":
-            return `Picture ${outcome.index + 1} cannot be opened. Nothing was sent. Post normal screenshots and try again.`;
+            return `Picture ${outcome.index + 1} cannot be opened. Nothing was sent. Send normal screenshots and try again.`;
         case "sent": {
             const what = outcome.count === 1 ? "1 picture" : `${outcome.count} pictures`;
             const left = outcome.skipped ? ` (${outcome.skipped} other file${outcome.skipped === 1 ? "" : "s"} left out)` : "";
@@ -48,7 +48,7 @@ export function uploadText(outcome) {
         }
         case "failed":
             return outcome.sent
-                ? `${outcome.error} Only ${outcome.sent} of ${outcome.count} pictures arrived: post all of them again later.`
+                ? `${outcome.error} Only ${outcome.sent} of ${outcome.count} pictures arrived: send all of them again later.`
                 : outcome.error;
     }
 }

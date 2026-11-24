@@ -1,5 +1,6 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { EXPORTS } from "../exports/exports.js";
+import { MAX_PICTURES } from "../uploads/upload.js";
 export const iamCommand = new SlashCommandBuilder()
     .setName("iam")
     .setDescription("Tell Carlos who you are in the game, so your screenshots go under your name")
@@ -12,6 +13,18 @@ export const linkCommand = new SlashCommandBuilder()
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
     .addUserOption((o) => o.setName("user").setDescription("The Discord account").setRequired(true))
     .addStringOption((o) => o.setName("name").setDescription("The name on the alliance member list").setRequired(true).setAutocomplete(true).setMaxLength(60));
+/** The attachment options of /whisper: picture, picture2 ... picture10. */
+export const WHISPER_OPTIONS = Array.from({ length: MAX_PICTURES }, (_, i) => (i ? `picture${i + 1}` : "picture"));
+export const whisperCommand = (() => {
+    const c = new SlashCommandBuilder()
+        .setName("whisper")
+        .setDescription("Send screenshots only to Carlos: nobody else in the channel sees them")
+        .setDMPermission(false);
+    for (const [i, name] of WHISPER_OPTIONS.entries()) {
+        c.addAttachmentOption((o) => o.setName(name).setDescription(i ? `Screenshot ${i + 1}` : "A screenshot (add more with picture2 ... picture10)").setRequired(i === 0));
+    }
+    return c;
+})();
 export const playerCommand = new SlashCommandBuilder()
     .setName("player")
     .setDescription("Look up a player: AD scores, donations, squads and coachman duties")
@@ -38,7 +51,7 @@ function exportCommand(name, description) {
 }
 /** The commands for this alliance: the sheet commands only for the sheets Carlos has a link to. */
 export function buildCommands(sheets) {
-    const list = [iamCommand, linkCommand];
+    const list = [iamCommand, linkCommand, whisperCommand];
     if (sheets.coachman)
         list.push(playerCommand);
     for (const [name, c] of Object.entries(EXPORT_COMMANDS)) {

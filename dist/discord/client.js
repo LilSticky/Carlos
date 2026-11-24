@@ -5,7 +5,7 @@ import { suggestMembers } from "../members/members.js";
 import { readPlayers, searchAnswer } from "../search/player-card.js";
 import { SheetError } from "../sheet/sheet.js";
 import { sendUpload } from "../uploads/upload.js";
-import { buildCommands } from "./commands.js";
+import { buildCommands, WHISPER_OPTIONS } from "./commands.js";
 import { exportText, iamText, linkText, uploadText } from "./texts.js";
 const EXPORT_COMMANDS = new Set(["coachman", "events", "kvk", "vote"]);
 const NO_PINGS = { parse: [] };
@@ -71,6 +71,9 @@ async function command(interaction, w) {
             w.log(`${user.id} is ${outcome.member} (/link by ${interaction.user.id}).`);
         await interaction.editReply(linkText(outcome, user.id));
     }
+    else if (name === "whisper") {
+        await whisper(interaction, w);
+    }
     else if (name === "player") {
         await player(interaction, w);
     }
@@ -128,6 +131,20 @@ async function send(interaction, messages) {
     await interaction.editReply({ content: first ?? "Nothing to show.", allowedMentions: NO_PINGS });
     for (const content of rest)
         await interaction.followUp({ content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+}
+/** Like a post in the upload channel, but the pictures and Carlos's answer are seen only by the sender. */
+async function whisper(interaction, w) {
+    const attachments = WHISPER_OPTIONS.flatMap((name) => {
+        const a = interaction.options.getAttachment(name);
+        return a ? [{ url: a.url, name: a.name, contentType: a.contentType, size: a.size }] : [];
+    });
+    const outcome = await sendUpload({ authorId: interaction.user.id, messageId: interaction.id, attachments }, w.upload);
+    if (outcome.kind === "failed" && outcome.setup)
+        w.log(`/whisper ${interaction.id}: ${outcome.error}`);
+    await interaction.editReply({
+        content: uploadText(outcome) ?? "None of these files is a screenshot. Nothing was sent.",
+        allowedMentions: NO_PINGS,
+    });
 }
 async function upload(message, w) {
     const working = await message.react("⏳").catch(() => undefined);
