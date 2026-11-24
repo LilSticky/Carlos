@@ -16,7 +16,8 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
 - **Screenshots in the upload channel**: a member posts up to 10 pictures in one message. Carlos turns them
   into JPEGs like the upload page does (longest edge 2400 px, quality 88) and sends them as **one** upload
   to the Upload Inbox of Alliance Members. From there, the existing AI pipeline reads them every 10 minutes.
-  ⏳ while it works, then ✅ or ❌ and a reply.
+  ⏳ while it works, then ✅ or ❌ and a reply. A failure a second try can fix (not linked with /iam yet,
+  the sheet busy) gets a **Retry** button: only the sender can press it, and the post need not be repeated.
 - **/whisper `picture` … `picture10`**: the same upload, but private. It works in any channel, and only the
   sender sees the pictures and Carlos's answer. The officers find the upload in the Upload Inbox as usual.
 - **/player `name`**: a player's combat card from Alliance Statistics, for members and players seen in
