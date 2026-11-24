@@ -10,6 +10,8 @@ import { SheetError } from "../sheet/sheet.js";
 import { sendUpload } from "../uploads/upload.js";
 import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
 import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
+import { SIEGE_BUTTON } from "../siege/siege.js";
+import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
 const NO_PINGS = { parse: [] };
 /**
  * Logs in, registers the slash commands on the alliance server (guild commands show up at once) and answers them,
@@ -23,6 +25,9 @@ export async function connect(w) {
     client.once(Events.ClientReady, (ready) => {
         w.log(`Carlos is online as ${ready.user.tag}.`);
         void w.memberList.fresh().catch((e) => w.log(`Member list not loaded: ${String(e)}`));
+        // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
+        if (w.siege?.channelId)
+            startSiegeBoard(ready, w.siege);
     });
     client.on(Events.InteractionCreate, (interaction) => {
         if (interaction.guildId !== w.config.guildId)
@@ -37,6 +42,9 @@ export async function connect(w) {
         }
         else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
             void retrace(interaction, w).catch((e) => w.log(`Retrace failed: ${String(e)}`));
+        }
+        else if (interaction.isButton() && interaction.customId.startsWith(SIEGE_BUTTON) && w.siege) {
+            void siegeButton(interaction, w.siege).catch((e) => w.log(`Siege sign-up failed: ${String(e)}`));
         }
         else if (interaction.isButton() && interaction.customId.startsWith(RETRY_UPLOAD)) {
             void retryUpload(interaction, w).catch((e) => w.log(`Upload retry failed: ${String(e)}`));
@@ -137,6 +145,9 @@ async function lead(interaction, w) {
     }
     else if (sub === "stats") {
         await stats(interaction, w);
+    }
+    else if (sub === "siege" && w.siege) {
+        await siegeNow(interaction, w.siege);
     }
     else {
         const text = leadText(sub, interaction.options.getString("what") ?? interaction.options.getString("which"));

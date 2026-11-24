@@ -6,6 +6,7 @@ import { MemberList } from "./members/members.js";
 import { isOfficer } from "./members/officers.js";
 import { callWebApp, createSheet, SheetError } from "./sheet/sheet.js";
 import { LinkStore, openDatabase } from "./storage/link-store.js";
+import { SiegeStore } from "./storage/siege-store.js";
 import { download, toJpeg } from "./uploads/jpeg.js";
 import { MAX_FILE_BYTES } from "./uploads/upload.js";
 // Wispbyte writes its panel variables to .env instead of exporting them; exported variables win.
@@ -47,6 +48,19 @@ const client = await connect({
     },
     callSheet,
     isOfficer: (id) => isOfficer(id, { memberOf: (d) => links.memberOf(d), officers: () => officerList.names() }),
+    ...(config.sheets.siege
+        ? {
+            siege: {
+                callSheet,
+                store: new SiegeStore(db),
+                channelId: config.siegeChannelId ?? "",
+                memberOf: (id) => links.memberOf(id),
+                discordOf: (member) => links.holderOf(member, ""),
+                now: () => new Date(),
+                log,
+            },
+        }
+        : {}),
     log,
 });
 for (const signal of ["SIGINT", "SIGTERM"]) {

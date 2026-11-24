@@ -15,6 +15,7 @@ export const SHEET_SETTINGS = {
     kvk: "KVK_URL",
     stats: "STATS_URL",
     members: "MEMBERS_URL",
+    siege: "SIEGE_URL",
 };
 const execLink = z
     .string()
@@ -37,6 +38,8 @@ const schema = z.object({
     KVK_URL: execLink.optional(),
     STATS_URL: execLink.optional(),
     MEMBERS_URL: execLink.optional(),
+    SIEGE_URL: execLink.optional(),
+    SIEGE_CHANNEL_ID: snowflake.optional(),
 });
 export function readConfig(env) {
     const blankless = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
@@ -63,6 +66,7 @@ export function readConfig(env) {
         sheetSecret: e.SHEET_SECRET,
         dataDir: e.DATA_DIR,
         sheets,
+        ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
     };
 }
 //# sourceMappingURL=config.js.map
