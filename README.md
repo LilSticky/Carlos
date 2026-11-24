@@ -15,11 +15,29 @@ for a single alliance with only a few channels.
   to the Upload Inbox of Alliance Members. From there, the existing AI pipeline reads them every 10 minutes.
   ⏳ while it works, then ✅ or ❌ and a reply.
 
+- **/player `name`**: the Coachman Express's player search. Shows the best match with its AD scores,
+  donations, squads and coachman duties, and names the other matches. Only R4 and R5 see the officers' notes.
+- **/coachman**, **/events**, **/kvk**, **/vote**: the texts the sheets' menus export, such as the schedule,
+  the daily message, the AD notice, the KvK roster and the vote lists. They are shown only to whoever asks,
+  with in-game texts in code blocks so they copy cleanly. With `post`, an R4 or R5 posts the text in the
+  channel instead. Members never see a draft schedule, and posting the schedule locks it in, like its first
+  export.
+- **Officers** are the members ranked R4 or R5 on the member list in the sheet, linked with /iam. Discord
+  roles play no part.
+
 ## How it reaches the sheets
 
-Through the `doPost` of the *Alliance upload* web app (rebirth-sheets, `upload/Code.js`, described in
-`upload/MAINTENANCE.md`). Carlos sends `{ secret, action }` as JSON; the web app answers `{ ok, ... }`. The
-secret is the web app's `BOT_SECRET` script property, and Carlos's `SHEET_SECRET`.
+Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to it as JSON:
+
+- the *Alliance upload* web app (rebirth-sheets `upload/Code.js`, `SHEET_URL`) for the member and officer
+  lists and the pictures;
+- `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning and Alliance
+  Statistics (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`) for search and exports. A sheet without
+  a link has no commands.
+
+Each web app answers `{ ok, ... }` and only to a request that carries its `BOT_SECRET` script property. That
+is the same text in every sheet, and Carlos's `SHEET_SECRET`. The sheets build every text themselves; Carlos
+only fetches it.
 
 ## Setup
 

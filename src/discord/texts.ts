@@ -1,3 +1,4 @@
+import type { ExportOutcome } from "../exports/exports.js";
 import type { IamOutcome } from "../members/iam.js";
 import type { UploadOutcome } from "../uploads/upload.js";
 
@@ -20,6 +21,21 @@ export function iamText(outcome: IamOutcome, uploadChannelId: string): string {
 
 export function linkText(outcome: IamOutcome, userId: string): string {
   return outcome.kind === "linked" ? `<@${userId}> is now **${outcome.member}**.` : iamText(outcome, "");
+}
+
+/** What Carlos says to the asker about an export (the text itself goes in separate messages). */
+export function exportText(outcome: ExportOutcome): string {
+  switch (outcome.kind) {
+    case "officers-only":
+      return "Only R4 and R5 can do that. If you are one, tell Carlos who you are with **/iam** first.";
+    case "draft":
+      return "Next week's schedule is still being planned. The officers post it once it is locked in.";
+    case "failed":
+      return outcome.error;
+    case "shown":
+      if (outcome.post) return `Posted: ${outcome.def.label}.${outcome.lockedNow ? " The schedule is locked in now." : ""}`;
+      return `**${outcome.def.label}**${outcome.draft ? " (draft: not locked in yet, members can't see it)" : ""}`;
+  }
 }
 
 export function uploadText(outcome: UploadOutcome): string | undefined {

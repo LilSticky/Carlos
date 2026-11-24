@@ -16,7 +16,24 @@ export interface Config {
   readonly sheetUrl: string;
   readonly sheetSecret: string;
   readonly dataDir: string;
+  /** The /exec links of the sheets whose Bot.js Carlos may ask; a sheet without a link has no commands. */
+  readonly sheets: Readonly<Partial<Record<SheetKey, string>>>;
 }
+
+export type SheetKey = "coachman" | "events" | "kvk" | "stats";
+
+/** The setting that holds each sheet's /exec link. */
+export const SHEET_SETTINGS = {
+  coachman: "COACHMAN_URL",
+  events: "EVENTS_URL",
+  kvk: "KVK_URL",
+  stats: "STATS_URL",
+} as const satisfies Record<SheetKey, string>;
+
+const execLink = z
+  .string()
+  .trim()
+  .regex(/^https:\/\/script\.google\.com\/\S+\/exec$/, "must be the /exec link of the sheet's web app");
 
 const snowflake = z.string().trim().regex(/^\d{17,20}$/, "must be a Discord ID (17 to 20 digits)");
 
@@ -31,6 +48,10 @@ const schema = z.object({
     .regex(/^https:\/\/script\.google\.com\/\S+\/exec$/, "must be the /exec link of the Alliance upload web app"),
   SHEET_SECRET: z.string().trim().min(24, "must be the BOT_SECRET of the upload web app (24 characters or more)"),
   DATA_DIR: z.string().trim().min(1).default("data"),
+  COACHMAN_URL: execLink.optional(),
+  EVENTS_URL: execLink.optional(),
+  KVK_URL: execLink.optional(),
+  STATS_URL: execLink.optional(),
 });
 
 export function readConfig(env: Readonly<Record<string, string | undefined>>): Config {
@@ -45,6 +66,11 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): C
     );
   }
   const e = parsed.data;
+  const sheets: Partial<Record<SheetKey, string>> = {};
+  for (const key of Object.keys(SHEET_SETTINGS) as SheetKey[]) {
+    const url = e[SHEET_SETTINGS[key]];
+    if (url) sheets[key] = url;
+  }
   return {
     discordToken: e.DISCORD_TOKEN,
     appId: e.DISCORD_APP_ID,
@@ -53,5 +79,6 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): C
     sheetUrl: e.SHEET_URL,
     sheetSecret: e.SHEET_SECRET,
     dataDir: e.DATA_DIR,
+    sheets,
   };
 }

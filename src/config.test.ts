@@ -20,7 +20,14 @@ describe("readConfig", () => {
       sheetUrl: "https://script.google.com/macros/s/AKfy-abc_123/exec",
       sheetSecret: "a-secret-that-is-long-enough",
       dataDir: "data",
+      sheets: {},
     });
+  });
+
+  it("keeps the links of the sheets that have one", () => {
+    const url = "https://script.google.com/macros/s/AKfy-kvk/exec";
+    expect(readConfig({ ...good, KVK_URL: url, STATS_URL: " " }).sheets).toEqual({ kvk: url });
+    expect(() => readConfig({ ...good, EVENTS_URL: "https://example.com" })).toThrow(/EVENTS_URL must be the \/exec link/);
   });
 
   it("names every missing or wrong setting, without its value", () => {
