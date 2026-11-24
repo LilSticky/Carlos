@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder, type RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord.js";
 import type { SheetKey } from "../config.js";
 import { EXPORTS, type ExportCommand } from "../exports/exports.js";
+import { MAX_PICTURES } from "../uploads/upload.js";
 
 export const iamCommand = new SlashCommandBuilder()
   .setName("iam")
@@ -19,6 +20,22 @@ export const linkCommand = new SlashCommandBuilder()
   .addStringOption((o) =>
     o.setName("name").setDescription("The name on the alliance member list").setRequired(true).setAutocomplete(true).setMaxLength(60),
   );
+
+/** The attachment options of /whisper: picture, picture2 ... picture10. */
+export const WHISPER_OPTIONS: readonly string[] = Array.from({ length: MAX_PICTURES }, (_, i) => (i ? `picture${i + 1}` : "picture"));
+
+export const whisperCommand = (() => {
+  const c = new SlashCommandBuilder()
+    .setName("whisper")
+    .setDescription("Send screenshots only to Carlos: nobody else in the channel sees them")
+    .setDMPermission(false);
+  for (const [i, name] of WHISPER_OPTIONS.entries()) {
+    c.addAttachmentOption((o) =>
+      o.setName(name).setDescription(i ? `Screenshot ${i + 1}` : "A screenshot (add more with picture2 ... picture10)").setRequired(i === 0),
+    );
+  }
+  return c;
+})();
 
 export const playerCommand = new SlashCommandBuilder()
   .setName("player")
@@ -55,7 +72,7 @@ function exportCommand(name: ExportCommand, description: string): CommandBuilder
 
 /** The commands for this alliance: the sheet commands only for the sheets Carlos has a link to. */
 export function buildCommands(sheets: Readonly<Partial<Record<SheetKey, string>>>): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
-  const list: CommandBuilder[] = [iamCommand, linkCommand];
+  const list: CommandBuilder[] = [iamCommand, linkCommand, whisperCommand];
   if (sheets.coachman) list.push(playerCommand);
   for (const [name, c] of Object.entries(EXPORT_COMMANDS) as [ExportCommand, { sheet: SheetKey; description: string }][]) {
     if (sheets[c.sheet]) list.push(exportCommand(name, c.description));

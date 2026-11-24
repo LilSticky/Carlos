@@ -14,6 +14,8 @@ for a single alliance with only a few channels.
   into JPEGs like the upload page does (longest edge 2400 px, quality 88) and sends them as **one** upload
   to the Upload Inbox of Alliance Members. From there, the existing AI pipeline reads them every 10 minutes.
   ⏳ while it works, then ✅ or ❌ and a reply.
+- **/whisper `picture` … `picture10`**: the same upload, but private. It works in any channel, and only the
+  sender sees the pictures and Carlos's answer. The officers find the upload in the Upload Inbox as usual.
 
 - **/player `name`**: the Coachman Express's player search. Shows the best match with its AD scores,
   donations, squads and coachman duties, and names the other matches. Only R4 and R5 see the officers' notes.

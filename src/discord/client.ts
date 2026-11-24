@@ -17,7 +17,7 @@ import { readPlayers, searchAnswer } from "../search/player-card.js";
 import { SheetError } from "../sheet/sheet.js";
 import type { UploadDeps } from "../uploads/upload.js";
 import { sendUpload } from "../uploads/upload.js";
-import { buildCommands } from "./commands.js";
+import { buildCommands, WHISPER_OPTIONS } from "./commands.js";
 import { exportText, iamText, linkText, uploadText } from "./texts.js";
 
 export interface Wiring {
@@ -95,6 +95,8 @@ async function command(interaction: ChatInputCommandInteraction, w: Wiring): Pro
     const outcome = await assignName(user.id, interaction.options.getString("name", true), w.iam);
     if (outcome.kind === "linked") w.log(`${user.id} is ${outcome.member} (/link by ${interaction.user.id}).`);
     await interaction.editReply(linkText(outcome, user.id));
+  } else if (name === "whisper") {
+    await whisper(interaction, w);
   } else if (name === "player") {
     await player(interaction, w);
   } else if (EXPORT_COMMANDS.has(name)) {
@@ -148,6 +150,20 @@ async function send(interaction: ChatInputCommandInteraction, messages: readonly
   const [first, ...rest] = messages;
   await interaction.editReply({ content: first ?? "Nothing to show.", allowedMentions: NO_PINGS });
   for (const content of rest) await interaction.followUp({ content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+}
+
+/** Like a post in the upload channel, but the pictures and Carlos's answer are seen only by the sender. */
+async function whisper(interaction: ChatInputCommandInteraction, w: Wiring): Promise<void> {
+  const attachments = WHISPER_OPTIONS.flatMap((name) => {
+    const a = interaction.options.getAttachment(name);
+    return a ? [{ url: a.url, name: a.name, contentType: a.contentType, size: a.size }] : [];
+  });
+  const outcome = await sendUpload({ authorId: interaction.user.id, messageId: interaction.id, attachments }, w.upload);
+  if (outcome.kind === "failed" && outcome.setup) w.log(`/whisper ${interaction.id}: ${outcome.error}`);
+  await interaction.editReply({
+    content: uploadText(outcome) ?? "None of these files is a screenshot. Nothing was sent.",
+    allowedMentions: NO_PINGS,
+  });
 }
 
 async function upload(message: Message, w: Wiring): Promise<void> {
