@@ -20,6 +20,13 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
   the sheet busy) gets a **Retry** button: only the sender can press it, and the post need not be repeated.
 - **/whisper `picture` … `picture10`**: the same upload, but private. It works in any channel, and only the
   sender sees the pictures and Carlos's answer. The officers find the upload in the Upload Inbox as usual.
+- **Recordings in the video inbox** (`VIDEO_CHANNEL_ID`, R4 and R5 only): a screen recording of an event's
+  ranking, posted as a video. Carlos sends it to the Upload Inbox as a recording, like the recording page
+  but without the officer code (the /iam link vouches for the poster). When the post's text names the ranking
+  (`hunt`, `Cheese Trap`, `AD`, `KvK`), it goes at once; else Carlos asks with a menu of the kinds the sheet
+  can read, which any R4 or R5 may answer. *No import for this event yet* puts it off: Carlos asks again on a
+  start after the sheet has learned a new kind. *Leave it* skips it. On every start Carlos looks through the
+  channel's last 100 posts for videos it has not handled yet. One video per post.
 - **/player `name`**: a player's combat card from Alliance Statistics, for members and players seen in
   reports. No AD scores, donations or other member numbers.
 - **/farms**: players without an alliance tag with lots of resources, from scout reports. Pick the one you
@@ -40,11 +47,11 @@ Integrations > Carlos*), but that only hides it: Carlos checks the rank on the s
 
 Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to it as JSON:
 
-- the *Alliance upload* web app (rebirth-sheets `upload/Code.js`, `SHEET_URL`) for the member and officer
-  lists and the pictures;
-- `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning, Alliance
-  Statistics and Alliance Members (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`, `MEMBERS_URL`) for
-  search, exports and the farms. A sheet without a link has no commands.
+- `Bot.js` in Alliance Members (`MEMBERS_URL`, required) for the member and officer lists, the screenshots
+  and the ranking recordings (its `members/Uploads.js`; Discord is the only way into the Upload Inbox), and
+  the farms;
+- `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning and Alliance
+  Statistics (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`) for search and exports. A sheet without a link has no commands.
 - `Bot.js` in the Undead Siege sheet (`SIEGE_URL`): with `SIEGE_CHANNEL_ID` set, Carlos posts the invitation
   with its Participate button before each siege of the Event Calendar, signs up whoever presses it (their `/iam`
   name) and posts the defense plan before the start, mentioning the members who send squads. `/lead siege` makes

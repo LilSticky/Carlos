@@ -31,6 +31,7 @@ import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands
 import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
 import { siegeButton, siegeNow, startSiegeBoard, type SiegeDeps } from "./siege-board.js";
+import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost, type VideoDeps } from "./video-inbox.js";
 
 export interface Wiring {
   readonly config: Config;
@@ -45,6 +46,8 @@ export interface Wiring {
   readonly isOfficer: (discordId: string) => Promise<boolean>;
   /** The Undead Siege: invitation, Participate button and plan; only with SIEGE_URL. */
   readonly siege?: SiegeDeps;
+  /** The video inbox: ranking recordings of R4 and R5; only with VIDEO_CHANNEL_ID. */
+  readonly video?: VideoDeps;
   readonly log: (line: string) => void;
 }
 
@@ -65,6 +68,7 @@ export async function connect(w: Wiring): Promise<Client> {
     void w.memberList.fresh().catch((e: unknown) => w.log(`Member list not loaded: ${String(e)}`));
     // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
     if (w.siege?.channelId) startSiegeBoard(ready, w.siege);
+    if (w.video) void catchUpVideos(ready, w.video).catch((e: unknown) => w.log(`Video inbox catch-up failed: ${String(e)}`));
   });
 
   client.on(Events.InteractionCreate, (interaction) => {
@@ -74,6 +78,8 @@ export async function connect(w: Wiring): Promise<Client> {
       void pickCard(interaction, w).catch((e: unknown) => w.log(`Card menu failed: ${String(e)}`));
     } else if (interaction.isStringSelectMenu() && interaction.customId === FARM_MENU) {
       void pickFarm(interaction, w).catch((e: unknown) => w.log(`Farm menu failed: ${String(e)}`));
+    } else if (interaction.isStringSelectMenu() && interaction.customId.startsWith(VIDEO_MENU) && w.video) {
+      void videoMenu(interaction, w.video).catch((e: unknown) => w.log(`Video menu failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
       void retrace(interaction, w).catch((e: unknown) => w.log(`Retrace failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(SIEGE_BUTTON) && w.siege) {
@@ -89,6 +95,10 @@ export async function connect(w: Wiring): Promise<Client> {
   });
 
   client.on(Events.MessageCreate, (message) => {
+    if (w.video && !message.author.bot && message.guildId === w.config.guildId && message.channelId === w.video.channelId) {
+      if (message.attachments.size) void videoPost(message, w.video).catch((e: unknown) => w.log(`Video ${message.id} failed: ${String(e)}`));
+      return;
+    }
     if (message.author.bot || message.guildId !== w.config.guildId || message.channelId !== w.config.uploadChannelId) return;
     if (!message.attachments.size) return;
     void upload(message, w).catch((e: unknown) => w.log(`Upload ${message.id} failed: ${String(e)}`));

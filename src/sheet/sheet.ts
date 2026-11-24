@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 /**
- * The alliance sheet, reached through the doPost of the "Alliance upload" web app (rebirth-sheets,
- * upload/Code.js). Every answer is HTTP 200 with { ok, ... } or { ok: false, error }: a web app cannot set a
- * status code. fetch follows the web app's redirect to script.googleusercontent.com as a GET, which is what
+ * Alliance Members, reached through the doPost of its web app (rebirth-sheets members/Bot.js, the upload actions
+ * in members/BotActions.js and members/Uploads.js): the member and officer lists, and the screenshots and
+ * recordings members post in Discord, the only way into its Upload Inbox. Every answer is HTTP 200 with
+ * { ok, ... } or { ok: false, error }: a web app cannot set a status code. fetch follows the web app's redirect to script.googleusercontent.com as a GET, which is what
  * Apps Script expects.
  */
 export interface Sheet {
@@ -16,6 +17,32 @@ export interface Sheet {
    * member name as written in the sheet.
    */
   sendPicture(picture: PictureToSend): Promise<string>;
+  /** What a ranking recording can show (RECORDINGS of Alliance Members). */
+  kinds(): Promise<RecordingKind[]>;
+  /** Opens a recording's row in the Upload Inbox; the member must be R4 or R5. */
+  startRecording(recording: RecordingToSend): Promise<RecordingStart>;
+  /** One part of the video, in order 0 .. parts - 1, each `partBytes` long but the last. */
+  sendPart(id: string, index: number, bytes: Uint8Array): Promise<void>;
+}
+
+export interface RecordingKind {
+  readonly key: string;
+  readonly label: string;
+}
+
+export interface RecordingToSend {
+  readonly member: string;
+  readonly kind: string;
+  readonly size: number;
+  readonly mime: string;
+}
+
+export interface RecordingStart {
+  readonly id: string;
+  readonly parts: number;
+  readonly partBytes: number;
+  /** The member as written in the sheet. */
+  readonly name: string;
 }
 
 export interface PictureToSend {
@@ -46,6 +73,19 @@ const answer = z.union([
   z.object({ ok: z.literal(false), error: z.string() }),
 ]);
 const names = z.array(z.string());
+const kindList = z.array(z.object({ key: z.string().min(1), label: z.string().min(1) }));
+const recordingStart = z.object({
+  id: z.string().min(1),
+  parts: z.number().int().positive(),
+  partBytes: z.number().int().positive(),
+  name: z.string().min(1),
+});
+
+function readable<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw new SheetError("The alliance sheet sent an answer Carlos cannot read.", true);
+  return parsed.data;
+}
 
 export interface SheetOptions {
   readonly url: string;
@@ -56,7 +96,8 @@ export interface SheetOptions {
 
 /**
  * One call to a sheet's web app: { secret, action, ...extra } as JSON. Returns the answer when ok, else throws a
- * SheetError with the sheet's own text (or a setup problem). Used by the upload web app and by Bot.js in the sheets.
+ * SheetError with the sheet's own text (or a setup problem). Bot.js in the sheets takes { action, args } and
+ * answers { ok, result }.
  */
 export async function callWebApp(
   options: SheetOptions,
@@ -94,7 +135,13 @@ export async function callWebApp(
 }
 
 export function createSheet(options: SheetOptions): Sheet {
-  const call = (action: string, extra: Record<string, unknown> = {}) => callWebApp(options, action, extra);
+  /** One Bot.js action of Alliance Members; returns its result. */
+  async function call(action: string, args: Record<string, unknown> = {}, timeoutMs?: number): Promise<Record<string, unknown>> {
+    const body = await callWebApp(timeoutMs ? { ...options, timeoutMs } : options, action, { args });
+    const result = body["result"];
+    if (!result || typeof result !== "object") throw new SheetError("The alliance sheet sent an answer Carlos cannot read.", true);
+    return result as Record<string, unknown>;
+  }
 
   async function list(action: string, field: string): Promise<string[]> {
     const parsed = names.safeParse((await call(action))[field]);
@@ -114,6 +161,17 @@ export function createSheet(options: SheetOptions): Sheet {
         b64: Buffer.from(p.jpeg).toString("base64"),
       });
       return typeof body["member"] === "string" ? body["member"] : p.member;
+    },
+    async kinds() {
+      return readable(kindList, (await call("kinds"))["kinds"]);
+    },
+    async startRecording(r) {
+      const body = await call("recording", { name: r.member, kind: r.kind, size: r.size, mime: r.mime });
+      return readable(recordingStart, body);
+    },
+    async sendPart(id, index, bytes) {
+      // a part is 8 MiB: the sheet takes a minute at most, but give it room
+      await call("part", { id, index, b64: Buffer.from(bytes).toString("base64") }, options.timeoutMs ?? 300_000);
     },
   };
 }

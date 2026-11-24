@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRetryUpload, uploadText } from "./texts.js";
+import { askKindText, canRetryUpload, recordingText, uploadText } from "./texts.js";
 
 describe("canRetryUpload", () => {
   it("offers Retry only where a second try can work", () => {
@@ -25,5 +25,21 @@ describe("uploadText", () => {
   it("says to send again without the button (/whisper)", () => {
     expect(uploadText({ kind: "not-linked" })).toContain("then send your screenshots again.");
     expect(uploadText({ kind: "failed", error: "Busy.", setup: false, sent: 0, count: 2 })).toBe("Busy.");
+  });
+});
+
+describe("recording texts", () => {
+  it("says what was sent, and asks for one recording per post", () => {
+    expect(recordingText({ kind: "sent", member: "Alpha", label: "Hunt Battle", mb: 34, others: 0 })).toMatch(/^Sent as \*\*Hunt Battle\*\* \(34 MB, from Alpha\)/);
+    expect(recordingText({ kind: "sent", member: "Alpha", label: "Hunt Battle", mb: 34, others: 2 })).toContain("The other 2 videos");
+  });
+
+  it("asks to pick again after a failure", () => {
+    expect(recordingText({ kind: "failed", error: "Busy right now.", setup: false })).toBe("Busy right now. Pick the ranking again to retry.");
+  });
+
+  it("names the date of an older post", () => {
+    expect(askKindText()).not.toContain("posted on");
+    expect(askKindText("2026-11-20")).toContain("posted on 2026-11-20");
   });
 });

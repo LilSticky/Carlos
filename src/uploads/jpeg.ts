@@ -18,8 +18,9 @@ export async function download(
   url: string,
   maxBytes: number,
   fetch: typeof globalThis.fetch = globalThis.fetch,
+  timeoutMs = 60_000,
 ): Promise<Uint8Array> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (bytes.length > maxBytes) throw new Error("file too big");

@@ -6,7 +6,7 @@ const good = {
   DISCORD_APP_ID: "123456789012345678",
   GUILD_ID: "223456789012345678",
   UPLOAD_CHANNEL_ID: "323456789012345678",
-  SHEET_URL: "https://script.google.com/macros/s/AKfy-abc_123/exec",
+  MEMBERS_URL: "https://script.google.com/macros/s/AKfy-abc_123/exec",
   SHEET_SECRET: "a-secret-that-is-long-enough",
 };
 
@@ -17,23 +17,27 @@ describe("readConfig", () => {
       appId: "123456789012345678",
       guildId: "223456789012345678",
       uploadChannelId: "323456789012345678",
-      sheetUrl: "https://script.google.com/macros/s/AKfy-abc_123/exec",
       sheetSecret: "a-secret-that-is-long-enough",
       dataDir: "data",
-      sheets: {},
+      sheets: { members: "https://script.google.com/macros/s/AKfy-abc_123/exec" },
     });
   });
 
   it("keeps the links of the sheets that have one", () => {
     const url = "https://script.google.com/macros/s/AKfy-kvk/exec";
-    expect(readConfig({ ...good, KVK_URL: url, STATS_URL: " " }).sheets).toEqual({ kvk: url });
+    expect(readConfig({ ...good, KVK_URL: url, STATS_URL: " " }).sheets).toEqual({ kvk: url, members: good.MEMBERS_URL });
     expect(() => readConfig({ ...good, EVENTS_URL: "https://example.com" })).toThrow(/EVENTS_URL must be the \/exec link/);
+  });
+
+  it("keeps the video channel when set", () => {
+    expect(readConfig({ ...good, VIDEO_CHANNEL_ID: "423456789012345678" }).videoChannelId).toBe("423456789012345678");
+    expect(readConfig(good).videoChannelId).toBeUndefined();
   });
 
   it("names every missing or wrong setting, without its value", () => {
     let error: unknown;
     try {
-      readConfig({ ...good, DISCORD_TOKEN: " ", SHEET_URL: "https://example.com/exec", SHEET_SECRET: "short-secret" });
+      readConfig({ ...good, DISCORD_TOKEN: " ", MEMBERS_URL: "https://example.com/exec", SHEET_SECRET: "short-secret" });
     } catch (e) {
       error = e;
     }
@@ -41,8 +45,8 @@ describe("readConfig", () => {
     const problems = (error as ConfigError).problems;
     expect(problems).toEqual([
       "DISCORD_TOKEN is missing",
-      "SHEET_URL must be the /exec link of the Alliance upload web app",
-      "SHEET_SECRET must be the BOT_SECRET of the upload web app (24 characters or more)",
+      "SHEET_SECRET must be the BOT_SECRET of the sheets' web apps (24 characters or more)",
+      "MEMBERS_URL must be the /exec link of the sheet's web app",
     ]);
     expect((error as Error).message).not.toContain("short-secret");
   });

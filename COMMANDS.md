@@ -34,7 +34,9 @@ with everything else.
 | `/kvk` | Who comes to the KvK battle | KvK `roster` |
 | `/help` | These commands in plain words; officers also see the `/lead` part | none |
 
-Screenshots in the upload channel stay as they are; they need no command.
+Screenshots in the upload channel stay as they are; they need no command. Neither do the R4 and R5 ranking
+recordings in the video inbox (`VIDEO_CHANNEL_ID`): Carlos sends them to the Upload Inbox (Members `kinds`,
+`recording`, `part`) and asks with a menu which ranking a video shows when the post does not say.
 
 ## Leadership: `/lead`
 

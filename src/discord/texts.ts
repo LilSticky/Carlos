@@ -1,5 +1,6 @@
 import type { ExportOutcome } from "../exports/exports.js";
 import type { IamOutcome } from "../members/iam.js";
+import type { RecordingOutcome } from "../recordings/recording.js";
 import type { UploadOutcome } from "../uploads/upload.js";
 
 /** Everything Carlos says in Discord, in one place. */
@@ -71,3 +72,42 @@ export function uploadText(outcome: UploadOutcome, retry = false): string | unde
         : outcome.error;
   }
 }
+
+/** Under a video in the video channel: which ranking it shows. `postedOn` for an older post found on start. */
+export function askKindText(postedOn?: string): string {
+  const old = postedOn ? ` It was posted on ${postedOn}: check the date in the import tab.` : "";
+  return `Which ranking does this recording show? Pick it below and Carlos sends it to the Upload Inbox.${old}`;
+}
+
+export const KIND_LATER = "later";
+export const KIND_SKIP = "skip";
+
+/** The menu's two answers besides the kinds. */
+export const KIND_OTHER_OPTIONS = [
+  { value: KIND_LATER, label: "No import for this event yet", description: "Carlos asks again once the sheet can read it" },
+  { value: KIND_SKIP, label: "Leave it", description: "Already imported, or not a ranking" },
+] as const;
+
+export function recordingText(outcome: RecordingOutcome): string {
+  switch (outcome.kind) {
+    case "not-linked":
+      return "Who are you in the game? Tell Carlos once with **/iam**. Only R4 and R5 can send recordings.";
+    case "not-officer":
+      return `**${outcome.member}** is not R4 or R5 on the member list, so Carlos cannot send this recording. An R4 or R5 can post it instead.`;
+    case "no-video":
+      return "This post has no video Carlos can send.";
+    case "too-big":
+      return `The video is too big (${outcome.mb} MB, up to 400 MB). Record only the ranking, or lower the quality.`;
+    case "unreadable":
+      return "Carlos could not download the video. Post it again.";
+    case "sent": {
+      const others = outcome.others ? ` The other ${outcome.others === 1 ? "video" : `${outcome.others} videos`} of this post were left out: post one recording per message.` : "";
+      return `Sent as **${outcome.label}** (${outcome.mb} MB, from ${outcome.member}). The AI reads it within the next runs and fills the import tab, where an officer checks and imports it.${others}`;
+    }
+    case "failed":
+      return `${outcome.error} Pick the ranking again to retry.`;
+  }
+}
+
+export const LATER_TEXT = "No import for this event yet. Carlos asks again once the sheet can read a new kind of ranking.";
+export const SKIPPED_TEXT = "Left out: Carlos does not send this recording.";
