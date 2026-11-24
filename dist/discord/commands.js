@@ -18,6 +18,11 @@ export const whisperCommand = (() => {
     }
     return c;
 })();
+export const overlayCommand = new SlashCommandBuilder()
+    .setName("overlay")
+    .setDescription("Your personal key for the overlay app: a button over the game that sends screenshots")
+    .setDMPermission(false)
+    .addBooleanOption((o) => o.setName("off").setDescription("Turn your current key off instead of making a new one"));
 export const playerCommand = new SlashCommandBuilder()
     .setName("player")
     .setDescription("A player's combat card: Might, readiness, squads, heroes, gear and what reports showed")
@@ -103,7 +108,7 @@ function leadCommand(sheets) {
 }
 /** The commands for this alliance: the sheet commands only for the sheets Carlos has a link to. */
 export function buildCommands(sheets) {
-    const list = [iamCommand, whisperCommand];
+    const list = [iamCommand, whisperCommand, overlayCommand];
     if (sheets.members)
         list.push(farmsCommand);
     if (sheets.stats)
