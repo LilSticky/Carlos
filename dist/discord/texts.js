@@ -31,12 +31,18 @@ export function exportText(outcome) {
             return `**${outcome.def.label}**${outcome.draft ? " (draft: not locked in yet, members can't see it)" : ""}`;
     }
 }
-export function uploadText(outcome) {
+/** Failed uploads a second try can fix: the Retry button under the reply sends the same pictures again. */
+export function canRetryUpload(outcome) {
+    return outcome.kind === "not-linked" || outcome.kind === "not-a-member" || outcome.kind === "failed";
+}
+/** `retry`: the reply carries the Retry button (a post in the upload channel), so it says to press it. */
+export function uploadText(outcome, retry = false) {
+    const again = retry ? "press **Retry**" : "send your screenshots again";
     switch (outcome.kind) {
         case "not-linked":
-            return "Who are you in the game? Tell me once with **/iam**, then send your screenshots again.";
+            return `Who are you in the game? Tell me once with **/iam**, then ${again}.`;
         case "not-a-member":
-            return `**${outcome.member}** is not on the member list any more. Pick your name again with **/iam**, or ask an officer.`;
+            return `**${outcome.member}** is not on the member list any more. Pick your name again with **/iam**, or ask an officer. Then ${again}.`;
         case "no-pictures":
             return undefined; // a chat line in the channel: say nothing
         case "unreadable":
@@ -47,6 +53,11 @@ export function uploadText(outcome) {
             return `Thanks, **${outcome.member}**! ${what} sent to the officers${left}. They are read within the next minutes.`;
         }
         case "failed":
+            if (retry) {
+                return outcome.sent
+                    ? `${outcome.error} Only ${outcome.sent} of ${outcome.count} pictures arrived: press **Retry** later to send all of them again.`
+                    : `${outcome.error} Press **Retry** to send them again.`;
+            }
             return outcome.sent
                 ? `${outcome.error} Only ${outcome.sent} of ${outcome.count} pictures arrived: send all of them again later.`
                 : outcome.error;

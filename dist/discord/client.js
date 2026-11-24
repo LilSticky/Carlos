@@ -9,7 +9,7 @@ import { suggestMembers } from "../members/members.js";
 import { SheetError } from "../sheet/sheet.js";
 import { sendUpload } from "../uploads/upload.js";
 import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
-import { exportText, iamText, linkText, uploadText } from "./texts.js";
+import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
 const NO_PINGS = { parse: [] };
 /**
  * Logs in, registers the slash commands on the alliance server (guild commands show up at once) and answers them,
@@ -38,10 +38,13 @@ export async function connect(w) {
         else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
             void retrace(interaction, w).catch((e) => w.log(`Retrace failed: ${String(e)}`));
         }
+        else if (interaction.isButton() && interaction.customId.startsWith(RETRY_UPLOAD)) {
+            void retryUpload(interaction, w).catch((e) => w.log(`Upload retry failed: ${String(e)}`));
+        }
         else if (interaction.isChatInputCommand()) {
             void command(interaction, w).catch(async (e) => {
                 w.log(`/${interaction.commandName} failed: ${String(e)}`);
-                await interaction.editReply("Something went wrong. Please try again.").catch(() => undefined);
+                await fail(interaction, "Something went wrong. Please try again.").catch(() => undefined);
             });
         }
     });
@@ -70,9 +73,24 @@ async function autocomplete(interaction, w) {
         .respond(suggestMembers(cached, typed).map((n) => ({ name: n, value: n })))
         .catch(() => undefined);
 }
+/** Commands whose answer only the asker sees: linking, private screenshots and leadership. */
+const PRIVATE_COMMANDS = new Set(["iam", "whisper", "lead"]);
+/**
+ * Shows an error or refusal only to the asker. A public answer's placeholder is removed first, so the channel
+ * never keeps a failed command.
+ */
+async function fail(interaction, content) {
+    if (interaction.ephemeral) {
+        await interaction.editReply({ content, allowedMentions: NO_PINGS });
+        return;
+    }
+    await interaction.deleteReply().catch(() => undefined);
+    await interaction.followUp({ content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+}
 async function command(interaction, w) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const name = interaction.commandName;
+    // member commands that only show alliance texts or cards answer in the channel for everyone
+    await interaction.deferReply(PRIVATE_COMMANDS.has(name) ? { flags: MessageFlags.Ephemeral } : {});
     if (name === "iam") {
         const outcome = await claimName(interaction.user.id, interaction.options.getString("name", true), w.iam);
         if (outcome.kind === "linked")
@@ -160,11 +178,11 @@ function farmsMessage(list) {
 function retraceRow(key) {
     return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId((RETRACE + key).slice(0, 100)).setLabel("Gone? Retrace").setStyle(ButtonStyle.Secondary));
 }
-/** /farms: the farms without an alliance tag, seen only by the asker, with the menu to pick one. */
+/** /farms: the farms without an alliance tag, for everyone in the channel, with the menu to pick one. */
 async function farms(interaction, w) {
     const list = await farmCall("farms", {}, readFarmList, w);
     if (typeof list === "string") {
-        await interaction.editReply(list);
+        await fail(interaction, list);
         return;
     }
     await interaction.editReply({ ...farmsMessage(list), allowedMentions: NO_PINGS });
@@ -241,26 +259,37 @@ function cardMessage(card, withMenu) {
         : [];
     return { embeds: cardEmbeds(card), components };
 }
-/** /player: the combat card of a member or of a player seen in reports, seen only by the asker. */
+/** /player: the combat card of a member or of a player seen in reports, for everyone in the channel. */
 async function player(interaction, w) {
     const query = interaction.options.getString("name", true).trim();
     const card = await fetchCard(query, w);
     if (typeof card === "string") {
-        await interaction.editReply(card);
+        await fail(interaction, card);
         return;
     }
     if (!card.player) {
-        await interaction.editReply(`No player found for **${query}**: not on the member list and not seen in any report.`);
+        await fail(interaction, `No player found for **${query}**: not on the member list and not seen in any report.`);
         return;
     }
     await interaction.editReply({ ...cardMessage(card, true), allowedMentions: NO_PINGS });
 }
-/** The menu under a card: shows the picked player's card in the same (private) message. */
+/**
+ * The menu under a card: the one who asked for the card switches it in place; anyone else gets the picked card
+ * only for themselves, so a shared card never changes under its asker.
+ */
 async function pickCard(interaction, w) {
-    await interaction.deferUpdate();
+    const own = interaction.message.interactionMetadata?.user.id === interaction.user.id || interaction.message.flags.has(MessageFlags.Ephemeral);
+    if (own)
+        await interaction.deferUpdate();
+    else
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const card = await fetchCard(interaction.values[0] ?? "", w);
     if (typeof card === "string" || !card.player) {
-        await interaction.followUp({ content: typeof card === "string" ? card : "That player is gone from the sheets.", flags: MessageFlags.Ephemeral });
+        const content = typeof card === "string" ? card : "That player is gone from the sheets.";
+        if (own)
+            await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+        else
+            await interaction.editReply(content);
         return;
     }
     await interaction.editReply({ ...cardMessage(card, true), allowedMentions: NO_PINGS });
@@ -295,13 +324,17 @@ async function showText(interaction, key, post, isOfficer, w) {
         w.log(`/${interaction.commandName} ${def.key}: ${outcome.error}`);
     if (outcome.kind === "shown" && post)
         w.log(`${def.key} posted by ${interaction.user.id}.`);
-    await interaction.editReply(exportText(outcome));
-    if (outcome.kind !== "shown")
+    if (outcome.kind !== "shown") {
+        await fail(interaction, exportText(outcome));
         return;
-    // posted: plain text for everyone; shown to the asker: in-game texts in code blocks, easy to copy into the game
+    }
+    await interaction.editReply(exportText(outcome));
+    // posted: plain text; shown: in-game texts in code blocks, easy to copy into the game. Follow-ups are seen by
+    // whoever saw the first message (a /lead answer stays with the officer, a member command goes to everyone)
+    const quiet = !post && interaction.ephemeral === true;
     const messages = toMessages(outcome.parts, !post && !def.discord);
     for (const content of messages) {
-        await interaction.followUp(post ? { content, allowedMentions: NO_PINGS } : { content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+        await interaction.followUp(quiet ? { content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS } : { content, allowedMentions: NO_PINGS });
     }
 }
 /** The first message as the deferred reply, the rest as follow-ups, all only for the asker. */
@@ -325,11 +358,20 @@ async function whisper(interaction, w) {
         allowedMentions: NO_PINGS,
     });
 }
-async function upload(message, w) {
+const RETRY_UPLOAD = "upload-retry:";
+/** The Retry button under a failed upload's reply (the post's ID rides in the button). */
+function retryRow(messageId) {
+    return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(RETRY_UPLOAD + messageId).setLabel("Retry").setStyle(ButtonStyle.Primary));
+}
+/**
+ * Sends the pictures of a post in the upload channel. `uploadKey` makes the upload ID: the post's own ID the first
+ * time, the button press's ID on a retry, so a retry never adds its pictures to a half-sent first try.
+ */
+async function sendPost(message, uploadKey, w) {
     const working = await message.react("⏳").catch(() => undefined);
     const outcome = await sendUpload({
         authorId: message.author.id,
-        messageId: message.id,
+        messageId: uploadKey,
         attachments: [...message.attachments.values()].map((a) => ({
             url: a.url,
             name: a.name,
@@ -340,10 +382,45 @@ async function upload(message, w) {
     await working?.users.remove(message.client.user.id).catch(() => undefined);
     if (outcome.kind === "failed" && outcome.setup)
         w.log(`Upload ${message.id}: ${outcome.error}`);
-    const text = uploadText(outcome);
+    return outcome;
+}
+async function upload(message, w) {
+    const outcome = await sendPost(message, message.id, w);
+    const retry = canRetryUpload(outcome);
+    const text = uploadText(outcome, retry);
     if (!text)
         return;
     await message.react(outcome.kind === "sent" ? "✅" : "❌").catch(() => undefined);
-    await message.reply({ content: text, allowedMentions: { repliedUser: outcome.kind !== "sent" } });
+    await message.reply({
+        content: text,
+        components: retry ? [retryRow(message.id)] : [],
+        allowedMentions: { repliedUser: outcome.kind !== "sent" },
+    });
+}
+/** Retry under a failed upload: only its sender may press it; the same pictures go again, the reply shows how. */
+async function retryUpload(interaction, w) {
+    const postId = interaction.customId.slice(RETRY_UPLOAD.length);
+    const post = await interaction.channel?.messages.fetch(postId).catch(() => undefined);
+    if (!post) {
+        await interaction.update({ content: "The screenshots' post is gone. Post them again.", components: [] });
+        return;
+    }
+    if (post.author.id !== interaction.user.id) {
+        await interaction.reply({ content: "Only the one who posted these screenshots can retry.", flags: MessageFlags.Ephemeral });
+        return;
+    }
+    await interaction.deferUpdate();
+    const outcome = await sendPost(post, interaction.id, w);
+    const retry = canRetryUpload(outcome);
+    const sent = outcome.kind === "sent";
+    if (sent) {
+        await post.reactions.cache.get("❌")?.users.remove(post.client.user.id).catch(() => undefined);
+        await post.react("✅").catch(() => undefined);
+    }
+    await interaction.editReply({
+        content: uploadText(outcome, retry) ?? "None of these files is a screenshot. Nothing was sent.",
+        components: retry ? [retryRow(post.id)] : [],
+        allowedMentions: NO_PINGS,
+    });
 }
 //# sourceMappingURL=client.js.map
