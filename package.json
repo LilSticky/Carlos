@@ -1,0 +1,30 @@
+{
+  "name": "carlos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Carlos, the Alliance Attendant: the Discord bot for one alliance's sheets in Last Asylum: Plague",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0",
+    "vitest": "^5.0.5"
+  }
+}
