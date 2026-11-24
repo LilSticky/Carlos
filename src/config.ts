@@ -20,7 +20,7 @@ export interface Config {
   readonly sheets: Readonly<Partial<Record<SheetKey, string>>>;
 }
 
-export type SheetKey = "coachman" | "events" | "kvk" | "stats";
+export type SheetKey = "coachman" | "events" | "kvk" | "stats" | "members";
 
 /** The setting that holds each sheet's /exec link. */
 export const SHEET_SETTINGS = {
@@ -28,6 +28,7 @@ export const SHEET_SETTINGS = {
   events: "EVENTS_URL",
   kvk: "KVK_URL",
   stats: "STATS_URL",
+  members: "MEMBERS_URL",
 } as const satisfies Record<SheetKey, string>;
 
 const execLink = z
@@ -52,6 +53,7 @@ const schema = z.object({
   EVENTS_URL: execLink.optional(),
   KVK_URL: execLink.optional(),
   STATS_URL: execLink.optional(),
+  MEMBERS_URL: execLink.optional(),
 });
 
 export function readConfig(env: Readonly<Record<string, string | undefined>>): Config {

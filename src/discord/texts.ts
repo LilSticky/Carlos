@@ -13,7 +13,7 @@ export function iamText(outcome: IamOutcome, uploadChannelId: string): string {
     case "unknown":
       return `**${outcome.typed}** is not on the member list. Pick your name from the suggestions. Not on it? Ask an officer to add you first.`;
     case "taken":
-      return `**${outcome.member}** is already linked to another Discord account. If that is wrong, ask an officer: they can fix it with /link.`;
+      return `**${outcome.member}** is already linked to another Discord account. If that is wrong, ask an officer: they can fix it with /lead link.`;
     case "failed":
       return outcome.error;
   }

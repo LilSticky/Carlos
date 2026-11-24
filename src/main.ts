@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { PeopleList, readPeople } from "./cards/people.js";
 import { ConfigError, readConfig, SHEET_SETTINGS } from "./config.js";
 import { connect } from "./discord/client.js";
 import type { CallSheet } from "./exports/exports.js";
@@ -33,9 +34,13 @@ const callSheet: CallSheet = async (key, action, args) => {
   return (await callWebApp({ url, secret: config.sheetSecret, fetch: globalThis.fetch, timeoutMs: 240_000 }, action, { args }))["result"];
 };
 
+const people = new PeopleList(async () => (config.sheets.stats ? readPeople(await callSheet("stats", "people", {})) : []), () => Date.now());
+void people.refresh().catch((e: unknown) => log(`Player list not loaded: ${String(e)}`));
+
 const client = await connect({
   config,
   memberList,
+  people,
   iam: { names: () => memberList.fresh(), links, now: () => new Date() },
   upload: {
     memberOf: (id) => links.memberOf(id),

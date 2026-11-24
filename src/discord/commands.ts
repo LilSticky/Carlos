@@ -1,6 +1,11 @@
-import { PermissionFlagsBits, SlashCommandBuilder, type RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  type RESTPostAPIChatInputApplicationCommandsJSONBody,
+  type SlashCommandStringOption,
+} from "discord.js";
 import type { SheetKey } from "../config.js";
-import { EXPORTS, type ExportCommand } from "../exports/exports.js";
+import { isTextKey, MEMBER_TEXTS, TEXTS, type TextKey } from "../exports/exports.js";
 import { MAX_PICTURES } from "../uploads/upload.js";
 
 export const iamCommand = new SlashCommandBuilder()
@@ -9,16 +14,6 @@ export const iamCommand = new SlashCommandBuilder()
   .setDMPermission(false)
   .addStringOption((o) =>
     o.setName("name").setDescription("Your name on the alliance member list").setRequired(true).setAutocomplete(true).setMaxLength(60),
-  );
-
-export const linkCommand = new SlashCommandBuilder()
-  .setName("link")
-  .setDescription("Officers: set which member a Discord account is")
-  .setDMPermission(false)
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-  .addUserOption((o) => o.setName("user").setDescription("The Discord account").setRequired(true))
-  .addStringOption((o) =>
-    o.setName("name").setDescription("The name on the alliance member list").setRequired(true).setAutocomplete(true).setMaxLength(60),
   );
 
 /** The attachment options of /whisper: picture, picture2 ... picture10. */
@@ -39,43 +34,120 @@ export const whisperCommand = (() => {
 
 export const playerCommand = new SlashCommandBuilder()
   .setName("player")
-  .setDescription("Look up a player: AD scores, donations, squads and coachman duties")
+  .setDescription("A player's combat card: Might, readiness, squads, heroes, gear and what reports showed")
   .setDMPermission(false)
   .addStringOption((o) =>
-    o.setName("name").setDescription("Name, or part of it (also former members)").setRequired(true).setAutocomplete(true).setMinLength(2).setMaxLength(60),
+    o.setName("name").setDescription("Name, or part of it: our members and players seen in reports").setRequired(true).setAutocomplete(true).setMinLength(2).setMaxLength(60),
   );
 
-const EXPORT_COMMANDS: Record<ExportCommand, { sheet: SheetKey; description: string }> = {
-  coachman: { sheet: "coachman", description: "Coachman Express texts: schedule, daily message, rules and more" },
-  events: { sheet: "events", description: "Event Calendar texts: the week's events and the daily AD notice" },
-  kvk: { sheet: "kvk", description: "Who comes to the KvK battle" },
-  vote: { sheet: "stats", description: "Officers: the vote lists from Alliance Statistics" },
-};
+export const farmsCommand = new SlashCommandBuilder()
+  .setName("farms")
+  .setDescription("Players without an alliance tag with lots of resources: pick the one you attack")
+  .setDMPermission(false);
+
+/** The member commands that show one text each, with what they show. */
+const TEXT_COMMANDS: readonly { readonly name: string; readonly text: TextKey; readonly description: string }[] = [
+  { name: "schedule", text: "schedule", description: "This week's coachman schedule" },
+  { name: "today", text: "today", description: "Today's coachman message for the alliance chat" },
+  { name: "rules", text: "rules", description: "The coachman house rules" },
+  { name: "driverguide", text: "driverguide", description: "How to drive the coachman" },
+  { name: "events", text: "events", description: "This week's events" },
+  { name: "ad", text: "ad-today", description: "The Alliance Duel notice for today, or for tomorrow" },
+  { name: "elixir", text: "elixir", description: "The Elixir Scramble teams" },
+  { name: "kvk", text: "kvk", description: "Who comes to the KvK battle" },
+];
+
+/** The text a member command shows; /ad shows tomorrow's notice when asked. */
+export function memberText(command: string, tomorrow: boolean): TextKey | undefined {
+  if (command === "ad" && tomorrow) return "ad-tomorrow";
+  return TEXT_COMMANDS.find((c) => c.name === command)?.text;
+}
+
+const VOTES: readonly TextKey[] = ["nominees", "guards"];
+
+/** The text a /lead subcommand shows: posts only member texts, the vote only vote lists. */
+export function leadText(subcommand: string, choice: string | null): TextKey | undefined {
+  switch (subcommand) {
+    case "post":
+      return isTextKey(choice) && MEMBER_TEXTS.includes(choice) ? choice : undefined;
+    case "driver":
+    case "notice":
+      return subcommand;
+    case "vote":
+      return isTextKey(choice) && VOTES.includes(choice) ? choice : undefined;
+    default:
+      return undefined;
+  }
+}
 
 type CommandBuilder = { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody };
+type Sheets = Readonly<Partial<Record<SheetKey, string>>>;
 
-function exportCommand(name: ExportCommand, description: string): CommandBuilder {
-  const c = new SlashCommandBuilder().setName(name).setDescription(description).setDMPermission(false);
-  const list = EXPORTS[name];
-  if (list.length > 1) {
-    c.addStringOption((o) =>
-      o
-        .setName("what")
-        .setDescription("Which text")
-        .setRequired(true)
-        .addChoices(...list.map((d) => ({ name: d.label, value: d.key }))),
+const memberName = (o: SlashCommandStringOption, description: string) =>
+  o.setName("name").setDescription(description).setRequired(true).setAutocomplete(true).setMaxLength(60);
+
+/**
+ * /lead: everything for R4 and R5. Discord shows it only to members who may manage roles (a server admin can change
+ * that under Integrations); Carlos still checks the rank on the member list before it does anything.
+ */
+function leadCommand(sheets: Sheets): CommandBuilder {
+  const c = new SlashCommandBuilder()
+    .setName("lead")
+    .setDescription("R4 and R5: officer tools")
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
+  const postable = MEMBER_TEXTS.filter((k) => sheets[TEXTS[k].sheet]);
+  if (postable.length) {
+    c.addSubcommand((s) =>
+      s
+        .setName("post")
+        .setDescription("Post a member text in this channel for everyone")
+        .addStringOption((o) =>
+          o.setName("what").setDescription("Which text").setRequired(true).addChoices(...postable.map((k) => ({ name: TEXTS[k].label, value: k }))),
+        ),
     );
   }
-  c.addBooleanOption((o) => o.setName("post").setDescription("Officers: post it in this channel for everyone"));
+  c.addSubcommand((s) =>
+    s
+      .setName("link")
+      .setDescription("Set which member a Discord account is")
+      .addUserOption((o) => o.setName("user").setDescription("The Discord account").setRequired(true))
+      .addStringOption((o) => memberName(o, "The name on the alliance member list")),
+  );
+  if (sheets.coachman) {
+    c.addSubcommand((s) => s.setName("driver").setDescription("The driver reminder to send on"));
+    c.addSubcommand((s) => s.setName("notice").setDescription("The nominee notice"));
+  }
+  if (sheets.stats) {
+    c.addSubcommand((s) =>
+      s
+        .setName("vote")
+        .setDescription("A vote list to send on")
+        .addStringOption((o) =>
+          o.setName("which").setDescription("Which vote").setRequired(true).addChoices(...VOTES.map((k) => ({ name: TEXTS[k].label, value: k }))),
+        ),
+    );
+    c.addSubcommand((s) =>
+      s
+        .setName("stats")
+        .setDescription("A member's full statistics: AD, donations, tracker, duties")
+        .addStringOption((o) => memberName(o, "The name on the alliance member list")),
+    );
+  }
   return c;
 }
 
 /** The commands for this alliance: the sheet commands only for the sheets Carlos has a link to. */
-export function buildCommands(sheets: Readonly<Partial<Record<SheetKey, string>>>): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
-  const list: CommandBuilder[] = [iamCommand, linkCommand, whisperCommand];
-  if (sheets.coachman) list.push(playerCommand);
-  for (const [name, c] of Object.entries(EXPORT_COMMANDS) as [ExportCommand, { sheet: SheetKey; description: string }][]) {
-    if (sheets[c.sheet]) list.push(exportCommand(name, c.description));
+export function buildCommands(sheets: Sheets): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
+  const list: CommandBuilder[] = [iamCommand, whisperCommand];
+  if (sheets.members) list.push(farmsCommand);
+  if (sheets.stats) list.push(playerCommand);
+  for (const t of TEXT_COMMANDS) {
+    if (!sheets[TEXTS[t.text].sheet]) continue;
+    const c = new SlashCommandBuilder().setName(t.name).setDescription(t.description).setDMPermission(false);
+    if (t.name === "ad") c.addBooleanOption((o) => o.setName("tomorrow").setDescription("Tomorrow's notice instead of today's"));
+    list.push(c);
   }
+  list.push(leadCommand(sheets));
   return list.map((c) => c.toJSON());
 }

@@ -31,7 +31,7 @@ export async function claimName(discordId: string, typed: string, deps: IamDeps)
   return { kind: "linked", member };
 }
 
-/** /link: an officer sets which member a Discord account is, taking the name from any other account. */
+/** /lead link: an officer sets which member a Discord account is, taking the name from any other account. */
 export async function assignName(discordId: string, typed: string, deps: IamDeps): Promise<IamOutcome> {
   const member = await lookUp(typed, deps);
   if (typeof member !== "string") return member;

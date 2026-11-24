@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { SheetError } from "../sheet/sheet.js";
-import { findExport, runExport, toMessages, type CallSheet } from "./exports.js";
+import { MEMBER_TEXTS, runExport, TEXTS, toMessages, type CallSheet } from "./exports.js";
 
-const schedule = findExport("coachman", "schedule")!;
-const driver = findExport("coachman", "driver")!;
-const week = findExport("events", "week")!;
+const schedule = TEXTS.schedule;
+const driver = TEXTS.driver;
+const week = TEXTS.events;
 
 const answering = (answer: unknown) => {
   const calls: unknown[][] = [];
@@ -17,11 +17,15 @@ const answering = (answer: unknown) => {
 const member = { post: false, isOfficer: async () => false };
 const officer = (post = false) => ({ post, isOfficer: async () => true });
 
-describe("findExport", () => {
-  it("finds a choice, or the first one when none is picked", () => {
-    expect(findExport("kvk", null)?.action).toBe("roster");
-    expect(findExport("events", "ad-tomorrow")?.args).toEqual({ offset: 1 });
-    expect(findExport("events", "nope")).toBeUndefined();
+describe("TEXTS", () => {
+  it("keys every text by its own key", () => {
+    for (const [key, def] of Object.entries(TEXTS)) expect(def.key).toBe(key);
+    expect(TEXTS["ad-tomorrow"].args).toEqual({ offset: 1 });
+  });
+
+  it("keeps the officer texts out of the member texts", () => {
+    expect(MEMBER_TEXTS).toEqual(["schedule", "today", "rules", "driverguide", "events", "ad-today", "ad-tomorrow", "elixir", "kvk"]);
+    expect(Object.values(TEXTS).filter((d) => d.officersOnly).map((d) => d.key)).toEqual(["driver", "notice", "nominees", "guards"]);
   });
 });
 
@@ -60,7 +64,7 @@ describe("runExport", () => {
     const call: CallSheet = async () => {
       throw new SheetError("No coachman for Day II yet. Fill in the schedule first.");
     };
-    expect(await runExport(findExport("coachman", "daily")!, member, call)).toEqual({
+    expect(await runExport(TEXTS.today, member, call)).toEqual({
       kind: "failed", error: "No coachman for Day II yet. Fill in the schedule first.", setup: false,
     });
   });

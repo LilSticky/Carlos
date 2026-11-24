@@ -7,25 +7,33 @@ for a single alliance with only a few channels.
 
 ## What it does now
 
+The full command plan, with who sees what, is in `COMMANDS.md`.
+
+**For every member**, each command shows one thing, only to whoever asks:
+
 - **/iam `name`**: a member picks their name from the alliance member list (autocomplete). Carlos keeps the
   link in its own database. The sheets never store Discord IDs.
-- **/link `user` `name`** (members with *Manage Roles*): an officer sets or moves the link.
 - **Screenshots in the upload channel**: a member posts up to 10 pictures in one message. Carlos turns them
   into JPEGs like the upload page does (longest edge 2400 px, quality 88) and sends them as **one** upload
   to the Upload Inbox of Alliance Members. From there, the existing AI pipeline reads them every 10 minutes.
   ⏳ while it works, then ✅ or ❌ and a reply.
 - **/whisper `picture` … `picture10`**: the same upload, but private. It works in any channel, and only the
   sender sees the pictures and Carlos's answer. The officers find the upload in the Upload Inbox as usual.
+- **/player `name`**: a player's combat card from Alliance Statistics, for members and players seen in
+  reports. No AD scores, donations or other member numbers.
+- **/farms**: players without an alliance tag with lots of resources, from scout reports. Pick the one you
+  attack: it goes on cooldown under your name. Not there any more? **Gone? Retrace** asks the tracker where it went.
+- **/schedule**, **/today**, **/rules**, **/driverguide**, **/events**, **/ad** `[tomorrow]`, **/elixir**,
+  **/kvk**: the texts the sheets' menus export. In-game texts come in code blocks so they copy cleanly.
+  Members never see a draft schedule.
 
-- **/player `name`**: the Coachman Express's player search. Shows the best match with its AD scores,
-  donations, squads and coachman duties, and names the other matches. Only R4 and R5 see the officers' notes.
-- **/coachman**, **/events**, **/kvk**, **/vote**: the texts the sheets' menus export, such as the schedule,
-  the daily message, the AD notice, the KvK roster and the vote lists. They are shown only to whoever asks,
-  with in-game texts in code blocks so they copy cleanly. With `post`, an R4 or R5 posts the text in the
-  channel instead. Members never see a draft schedule, and posting the schedule locks it in, like its first
-  export.
-- **Officers** are the members ranked R4 or R5 on the member list in the sheet, linked with /iam. Discord
-  roles play no part.
+**For R4 and R5**, everything is under **/lead**: `post` (a member text in the channel for everyone; posting
+the schedule locks it in, like its first export), `link` (set which member a Discord account is), `driver`,
+`notice`, `vote` and `stats` (a member's full numbers).
+
+**Officers** are the members ranked R4 or R5 on the member list in the sheet, linked with /iam. Discord shows
+/lead only to members who may manage roles (a server admin can change that under *Server Settings >
+Integrations > Carlos*), but that only hides it: Carlos checks the rank on the sheet every time.
 
 ## How it reaches the sheets
 
@@ -33,9 +41,9 @@ Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to i
 
 - the *Alliance upload* web app (rebirth-sheets `upload/Code.js`, `SHEET_URL`) for the member and officer
   lists and the pictures;
-- `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning and Alliance
-  Statistics (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`) for search and exports. A sheet without
-  a link has no commands.
+- `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning, Alliance
+  Statistics and Alliance Members (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`, `MEMBERS_URL`) for
+  search, exports and the farms. A sheet without a link has no commands.
 
 Each web app answers `{ ok, ... }` and only to a request that carries its `BOT_SECRET` script property. That
 is the same text in every sheet, and Carlos's `SHEET_SECRET`. The sheets build every text themselves; Carlos

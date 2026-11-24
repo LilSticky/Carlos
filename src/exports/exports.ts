@@ -19,34 +19,34 @@ export interface ExportDef {
   readonly discord: boolean;
 }
 
-export const EXPORTS = {
-  coachman: [
-    { key: "schedule", label: "Weekly schedule", sheet: "coachman", action: "schedule", officersOnly: false, discord: false },
-    { key: "daily", label: "Daily chat message", sheet: "coachman", action: "daily", officersOnly: false, discord: false },
-    { key: "notice", label: "Nominee notice", sheet: "coachman", action: "notice", officersOnly: false, discord: false },
-    { key: "rules", label: "House rules", sheet: "coachman", action: "rules", officersOnly: false, discord: false },
-    { key: "guide", label: "Driver guide", sheet: "coachman", action: "guide", officersOnly: false, discord: false },
-    { key: "driver", label: "Driver reminder (officers)", sheet: "coachman", action: "driver", officersOnly: true, discord: false },
-  ],
-  events: [
-    { key: "week", label: "This week's events", sheet: "events", action: "week", officersOnly: false, discord: false },
-    { key: "ad-today", label: "AD notice: today", sheet: "events", action: "ad", args: { offset: 0 }, officersOnly: false, discord: false },
-    { key: "ad-tomorrow", label: "AD notice: tomorrow", sheet: "events", action: "ad", args: { offset: 1 }, officersOnly: false, discord: false },
-    { key: "elixir", label: "Elixir Scramble teams", sheet: "events", action: "elixir", officersOnly: false, discord: false },
-  ],
-  kvk: [{ key: "roster", label: "KvK roster", sheet: "kvk", action: "roster", officersOnly: false, discord: true }],
-  vote: [
-    { key: "nominees", label: "Special nomination vote", sheet: "stats", action: "votes", officersOnly: true, discord: false },
-    { key: "guards", label: "Guard vote", sheet: "stats", action: "guards", officersOnly: true, discord: false },
-  ],
-} as const satisfies Record<string, readonly ExportDef[]>;
+/**
+ * Every text, keyed by its own key. Members ask for theirs with one command each (/schedule, /today ...); officers
+ * post those with /lead post and see the officer texts with /lead (driver, notice, vote).
+ */
+export const TEXTS = {
+  schedule: { key: "schedule", label: "Weekly schedule", sheet: "coachman", action: "schedule", officersOnly: false, discord: false },
+  today: { key: "today", label: "Daily chat message", sheet: "coachman", action: "daily", officersOnly: false, discord: false },
+  rules: { key: "rules", label: "House rules", sheet: "coachman", action: "rules", officersOnly: false, discord: false },
+  driverguide: { key: "driverguide", label: "Driver guide", sheet: "coachman", action: "guide", officersOnly: false, discord: false },
+  events: { key: "events", label: "This week's events", sheet: "events", action: "week", officersOnly: false, discord: false },
+  "ad-today": { key: "ad-today", label: "AD notice: today", sheet: "events", action: "ad", args: { offset: 0 }, officersOnly: false, discord: false },
+  "ad-tomorrow": { key: "ad-tomorrow", label: "AD notice: tomorrow", sheet: "events", action: "ad", args: { offset: 1 }, officersOnly: false, discord: false },
+  elixir: { key: "elixir", label: "Elixir Scramble teams", sheet: "events", action: "elixir", officersOnly: false, discord: false },
+  kvk: { key: "kvk", label: "KvK roster", sheet: "kvk", action: "roster", officersOnly: false, discord: true },
+  driver: { key: "driver", label: "Driver reminder", sheet: "coachman", action: "driver", officersOnly: true, discord: false },
+  notice: { key: "notice", label: "Nominee notice", sheet: "coachman", action: "notice", officersOnly: true, discord: false },
+  nominees: { key: "nominees", label: "Special nomination vote", sheet: "stats", action: "votes", officersOnly: true, discord: false },
+  guards: { key: "guards", label: "Guard vote", sheet: "stats", action: "guards", officersOnly: true, discord: false },
+} as const satisfies Record<string, ExportDef>;
 
-export type ExportCommand = keyof typeof EXPORTS;
+export type TextKey = keyof typeof TEXTS;
 
-export function findExport(command: ExportCommand, key: string | null): ExportDef | undefined {
-  const list: readonly ExportDef[] = EXPORTS[command];
-  return key ? list.find((d) => d.key === key) : list[0];
+export function isTextKey(key: string | null): key is TextKey {
+  return key !== null && Object.hasOwn(TEXTS, key);
 }
+
+/** The texts members may ask for, in this order; officers may post them for everyone. */
+export const MEMBER_TEXTS: readonly TextKey[] = (Object.keys(TEXTS) as TextKey[]).filter((k) => !TEXTS[k].officersOnly);
 
 const result = z.union([
   z.object({ text: z.string(), draft: z.boolean().optional(), lockedNow: z.boolean().optional() }),
