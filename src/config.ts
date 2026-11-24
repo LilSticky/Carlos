@@ -18,9 +18,11 @@ export interface Config {
   readonly dataDir: string;
   /** The /exec links of the sheets whose Bot.js Carlos may ask; a sheet without a link has no commands. */
   readonly sheets: Readonly<Partial<Record<SheetKey, string>>>;
+  /** Where Carlos posts the Undead Siege invitation and plan; without it (or SIEGE_URL) nothing is posted by itself. */
+  readonly siegeChannelId?: string;
 }
 
-export type SheetKey = "coachman" | "events" | "kvk" | "stats" | "members";
+export type SheetKey = "coachman" | "events" | "kvk" | "stats" | "members" | "siege";
 
 /** The setting that holds each sheet's /exec link. */
 export const SHEET_SETTINGS = {
@@ -29,6 +31,7 @@ export const SHEET_SETTINGS = {
   kvk: "KVK_URL",
   stats: "STATS_URL",
   members: "MEMBERS_URL",
+  siege: "SIEGE_URL",
 } as const satisfies Record<SheetKey, string>;
 
 const execLink = z
@@ -54,6 +57,8 @@ const schema = z.object({
   KVK_URL: execLink.optional(),
   STATS_URL: execLink.optional(),
   MEMBERS_URL: execLink.optional(),
+  SIEGE_URL: execLink.optional(),
+  SIEGE_CHANNEL_ID: snowflake.optional(),
 });
 
 export function readConfig(env: Readonly<Record<string, string | undefined>>): Config {
@@ -82,5 +87,6 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): C
     sheetSecret: e.SHEET_SECRET,
     dataDir: e.DATA_DIR,
     sheets,
+    ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
   };
 }

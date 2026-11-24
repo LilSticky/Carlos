@@ -29,6 +29,8 @@ import type { UploadDeps } from "../uploads/upload.js";
 import { sendUpload } from "../uploads/upload.js";
 import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
 import { canRetryUpload, exportText, iamText, linkText, uploadText } from "./texts.js";
+import { SIEGE_BUTTON } from "../siege/siege.js";
+import { siegeButton, siegeNow, startSiegeBoard, type SiegeDeps } from "./siege-board.js";
 
 export interface Wiring {
   readonly config: Config;
@@ -41,6 +43,8 @@ export interface Wiring {
   readonly callSheet: CallSheet;
   /** True when the Discord account is linked to an R4 or R5 of the member list. */
   readonly isOfficer: (discordId: string) => Promise<boolean>;
+  /** The Undead Siege: invitation, Participate button and plan; only with SIEGE_URL. */
+  readonly siege?: SiegeDeps;
   readonly log: (line: string) => void;
 }
 
@@ -59,6 +63,8 @@ export async function connect(w: Wiring): Promise<Client> {
   client.once(Events.ClientReady, (ready) => {
     w.log(`Carlos is online as ${ready.user.tag}.`);
     void w.memberList.fresh().catch((e: unknown) => w.log(`Member list not loaded: ${String(e)}`));
+    // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
+    if (w.siege?.channelId) startSiegeBoard(ready, w.siege);
   });
 
   client.on(Events.InteractionCreate, (interaction) => {
@@ -70,6 +76,8 @@ export async function connect(w: Wiring): Promise<Client> {
       void pickFarm(interaction, w).catch((e: unknown) => w.log(`Farm menu failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
       void retrace(interaction, w).catch((e: unknown) => w.log(`Retrace failed: ${String(e)}`));
+    } else if (interaction.isButton() && interaction.customId.startsWith(SIEGE_BUTTON) && w.siege) {
+      void siegeButton(interaction, w.siege).catch((e: unknown) => w.log(`Siege sign-up failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(RETRY_UPLOAD)) {
       void retryUpload(interaction, w).catch((e: unknown) => w.log(`Upload retry failed: ${String(e)}`));
     } else if (interaction.isChatInputCommand()) {
@@ -165,6 +173,8 @@ async function lead(interaction: ChatInputCommandInteraction, w: Wiring): Promis
     await interaction.editReply(linkText(outcome, user.id));
   } else if (sub === "stats") {
     await stats(interaction, w);
+  } else if (sub === "siege" && w.siege) {
+    await siegeNow(interaction, w.siege);
   } else {
     const text = leadText(sub, interaction.options.getString("what") ?? interaction.options.getString("which"));
     if (!text) {

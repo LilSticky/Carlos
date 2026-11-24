@@ -118,6 +118,9 @@ function leadCommand(sheets: Sheets): CommandBuilder {
     c.addSubcommand((s) => s.setName("driver").setDescription("The driver reminder to send on"));
     c.addSubcommand((s) => s.setName("notice").setDescription("The nominee notice"));
   }
+  if (sheets.siege) {
+    c.addSubcommand((s) => s.setName("siege").setDescription("Make the Undead Siege defense plan now and post it here"));
+  }
   if (sheets.stats) {
     c.addSubcommand((s) =>
       s

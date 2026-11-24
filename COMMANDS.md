@@ -46,6 +46,7 @@ Screenshots in the upload channel stay as they are; they need no command.
 | `/lead notice` | The nominee notice | Coachman `notice` |
 | `/lead vote which` | The vote list: `nominees` or `guards` | Statistics `votes`, `guards` |
 | `/lead stats name` | All numbers of one member | Statistics `stats` |
+| `/lead siege` | Makes the Undead Siege defense plan now and posts it in this channel (Carlos also posts the invitation and the plan by itself in `SIEGE_CHANNEL_ID`) | Undead Siege `next`, `plan` |
 | `/lead auto …` | *Later:* switch the daily caravan post and the driver DMs on or off and pick the channel | new |
 
 ## Build slices
