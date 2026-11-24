@@ -1,20 +1,41 @@
 import {
   PermissionFlagsBits,
   SlashCommandBuilder,
+  SlashCommandSubcommandBuilder,
   type RESTPostAPIChatInputApplicationCommandsJSONBody,
+  type SlashCommandBooleanOption,
   type SlashCommandStringOption,
 } from "discord.js";
 import type { SheetKey } from "../config.js";
 import { isTextKey, MEMBER_TEXTS, TEXTS, type TextKey } from "../exports/exports.js";
 import { MAX_PICTURES } from "../uploads/upload.js";
+import { memberHelp } from "./help.js";
 
-export const iamCommand = new SlashCommandBuilder()
-  .setName("iam")
-  .setDescription("Tell Carlos who you are in the game, so your screenshots go under your name")
-  .setDMPermission(false)
-  .addStringOption((o) =>
-    o.setName("name").setDescription("Your name on the alliance member list").setRequired(true).setAutocomplete(true).setMaxLength(60),
-  );
+/** The option every command and /lead subcommand has: its help instead of what it does. */
+export const HELP_OPTION = "help";
+
+interface HasBooleanOption {
+  addBooleanOption(f: (o: SlashCommandBooleanOption) => SlashCommandBooleanOption): unknown;
+}
+
+/**
+ * Adds the help option. What a command needs is not marked required on Discord, so help works on its own; Carlos
+ * shows the help when something it needs is missing.
+ */
+function withHelp<T extends HasBooleanOption>(c: T): T {
+  c.addBooleanOption((o) => o.setName(HELP_OPTION).setDescription("How this command works, with examples"));
+  return c;
+}
+
+export const iamCommand = withHelp(
+  new SlashCommandBuilder()
+    .setName("iam")
+    .setDescription("Tell Carlos who you are in the game, so your screenshots go under your name")
+    .setDMPermission(false)
+    .addStringOption((o) =>
+      o.setName("name").setDescription("Your name on the alliance member list").setAutocomplete(true).setMaxLength(60),
+    ),
+);
 
 /** The attachment options of /whisper: picture, picture2 ... picture10. */
 export const WHISPER_OPTIONS: readonly string[] = Array.from({ length: MAX_PICTURES }, (_, i) => (i ? `picture${i + 1}` : "picture"));
@@ -25,31 +46,35 @@ export const whisperCommand = (() => {
     .setDescription("Send screenshots only to Carlos: nobody else in the channel sees them")
     .setDMPermission(false);
   for (const [i, name] of WHISPER_OPTIONS.entries()) {
-    c.addAttachmentOption((o) =>
-      o.setName(name).setDescription(i ? `Screenshot ${i + 1}` : "A screenshot (add more with picture2 ... picture10)").setRequired(i === 0),
-    );
+    c.addAttachmentOption((o) => o.setName(name).setDescription(i ? `Screenshot ${i + 1}` : "A screenshot (add more with picture2 ... picture10)"));
   }
-  return c;
+  return withHelp(c);
 })();
 
-export const overlayCommand = new SlashCommandBuilder()
-  .setName("overlay")
-  .setDescription("Your personal key for the overlay app: a button over the game that sends screenshots")
-  .setDMPermission(false)
-  .addBooleanOption((o) => o.setName("off").setDescription("Turn your current key off instead of making a new one"));
+export const overlayCommand = withHelp(
+  new SlashCommandBuilder()
+    .setName("overlay")
+    .setDescription("Your personal key for the overlay app: a button over the game that sends screenshots")
+    .setDMPermission(false)
+    .addBooleanOption((o) => o.setName("off").setDescription("Turn your current key off instead of making a new one")),
+);
 
-export const playerCommand = new SlashCommandBuilder()
-  .setName("player")
-  .setDescription("A player's combat card: Might, readiness, squads, heroes, gear and what reports showed")
-  .setDMPermission(false)
-  .addStringOption((o) =>
-    o.setName("name").setDescription("Name, or part of it: our members and players seen in reports").setRequired(true).setAutocomplete(true).setMinLength(2).setMaxLength(60),
-  );
+export const playerCommand = withHelp(
+  new SlashCommandBuilder()
+    .setName("player")
+    .setDescription("A player's combat card: Might, readiness, squads, heroes, gear and what reports showed")
+    .setDMPermission(false)
+    .addStringOption((o) =>
+      o.setName("name").setDescription("Name, or part of it: our members and players seen in reports").setAutocomplete(true).setMinLength(2).setMaxLength(60),
+    ),
+);
 
-export const farmsCommand = new SlashCommandBuilder()
-  .setName("farms")
-  .setDescription("Players without an alliance tag with lots of resources: pick the one you attack")
-  .setDMPermission(false);
+export const farmsCommand = withHelp(
+  new SlashCommandBuilder()
+    .setName("farms")
+    .setDescription("Players without an alliance tag with lots of resources: pick the one you attack")
+    .setDMPermission(false),
+);
 
 /** The member commands that show one text each, with what they show. */
 const TEXT_COMMANDS: readonly { readonly name: string; readonly text: TextKey; readonly description: string }[] = [
@@ -90,7 +115,7 @@ type CommandBuilder = { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBod
 type Sheets = Readonly<Partial<Record<SheetKey, string>>>;
 
 const memberName = (o: SlashCommandStringOption, description: string) =>
-  o.setName("name").setDescription(description).setRequired(true).setAutocomplete(true).setMaxLength(60);
+  o.setName("name").setDescription(description).setAutocomplete(true).setMaxLength(60);
 
 /**
  * /lead: everything for R4 and R5. Discord shows it only to members who may manage roles (a server admin can change
@@ -108,16 +133,14 @@ function leadCommand(sheets: Sheets): CommandBuilder {
       s
         .setName("post")
         .setDescription("Post a member text in this channel for everyone")
-        .addStringOption((o) =>
-          o.setName("what").setDescription("Which text").setRequired(true).addChoices(...postable.map((k) => ({ name: TEXTS[k].label, value: k }))),
-        ),
+        .addStringOption((o) => o.setName("what").setDescription("Which text").addChoices(...postable.map((k) => ({ name: TEXTS[k].label, value: k })))),
     );
   }
   c.addSubcommand((s) =>
     s
       .setName("link")
       .setDescription("Set which member a Discord account is")
-      .addUserOption((o) => o.setName("user").setDescription("The Discord account").setRequired(true))
+      .addUserOption((o) => o.setName("user").setDescription("The Discord account"))
       .addStringOption((o) => memberName(o, "The name on the alliance member list")),
   );
   if (sheets.coachman) {
@@ -132,9 +155,7 @@ function leadCommand(sheets: Sheets): CommandBuilder {
       s
         .setName("vote")
         .setDescription("A vote list to send on")
-        .addStringOption((o) =>
-          o.setName("which").setDescription("Which vote").setRequired(true).addChoices(...VOTES.map((k) => ({ name: TEXTS[k].label, value: k }))),
-        ),
+        .addStringOption((o) => o.setName("which").setDescription("Which vote").addChoices(...VOTES.map((k) => ({ name: TEXTS[k].label, value: k })))),
     );
     c.addSubcommand((s) =>
       s
@@ -143,7 +164,40 @@ function leadCommand(sheets: Sheets): CommandBuilder {
         .addStringOption((o) => memberName(o, "The name on the alliance member list")),
     );
   }
+  for (const sub of c.options) if (sub instanceof SlashCommandSubcommandBuilder) withHelp(sub);
   return c;
+}
+
+/** What a command or "lead sub" needs; without it Carlos shows the help. */
+const NEEDS: Readonly<Record<string, readonly (readonly string[])[]>> = {
+  iam: [["name"]],
+  player: [["name"]],
+  whisper: [WHISPER_OPTIONS],
+  "lead post": [["what"]],
+  "lead link": [["user"], ["name"]],
+  "lead vote": [["which"]],
+  "lead stats": [["name"]],
+};
+
+/**
+ * True when a command should show its help: asked for with help: True, or something it needs is missing (each group
+ * needs one of its options). `command` is "iam", or "lead post" for a /lead subcommand.
+ */
+export function wantsHelp(command: string, given: readonly { readonly name: string; readonly value?: unknown }[]): boolean {
+  if (given.some((o) => o.name === HELP_OPTION && o.value === true)) return true;
+  return (NEEDS[command] ?? []).some((group) => !given.some((o) => group.includes(o.name)));
+}
+
+/** /help: all commands, or one member command in detail. The /lead part shows only for officers, in the overview. */
+function helpCommand(sheets: Sheets): CommandBuilder {
+  const choices = memberHelp(sheets)
+    .filter((e) => e.name !== "help")
+    .map((e) => ({ name: `/${e.name}`, value: e.name }));
+  return new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("What each command is for; pick one to see how it works")
+    .setDMPermission(false)
+    .addStringOption((o) => o.setName("command").setDescription("The command to explain").addChoices(...choices));
 }
 
 /** The commands for this alliance: the sheet commands only for the sheets Carlos has a link to. */
@@ -155,8 +209,8 @@ export function buildCommands(sheets: Sheets): RESTPostAPIChatInputApplicationCo
     if (!sheets[TEXTS[t.text].sheet]) continue;
     const c = new SlashCommandBuilder().setName(t.name).setDescription(t.description).setDMPermission(false);
     if (t.name === "ad") c.addBooleanOption((o) => o.setName("tomorrow").setDescription("Tomorrow's notice instead of today's"));
-    list.push(c);
+    list.push(withHelp(c));
   }
-  list.push(leadCommand(sheets));
+  list.push(helpCommand(sheets), leadCommand(sheets));
   return list.map((c) => c.toJSON());
 }

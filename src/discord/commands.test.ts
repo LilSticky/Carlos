@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
 import { MAX_PICTURES } from "../uploads/upload.js";
-import { buildCommands, leadText, memberText, WHISPER_OPTIONS } from "./commands.js";
+import { buildCommands, HELP_OPTION, leadText, memberText, wantsHelp, WHISPER_OPTIONS } from "./commands.js";
 
 type Sheets = Parameters<typeof buildCommands>[0];
 const url = "https://script.google.com/macros/s/x/exec";
@@ -11,27 +11,43 @@ const subcommands = (sheets: Sheets) => lead(sheets)?.options?.map((o) => o.name
 
 describe("buildCommands", () => {
   it("offers only /iam, /whisper, /overlay and /lead without links to the other sheets", () => {
-    expect(buildCommands({}).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "lead"]);
+    expect(buildCommands({}).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "help", "lead"]);
   });
 
   it("puts /farms with Alliance Members, which keeps the list", () => {
-    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "lead"]);
+    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "help", "lead"]);
   });
 
-  it("lets /whisper take up to 10 pictures, the first one required", () => {
+  it("lets /whisper take up to 10 pictures, then help", () => {
     const [whisper] = buildCommands({}).filter((c) => c.name === "whisper");
     const options = whisper?.options ?? [];
-    expect(options).toHaveLength(MAX_PICTURES);
-    expect(options.map((o) => [o.name, o.type, o.required ?? false])[0]).toEqual(["picture", ApplicationCommandOptionType.Attachment, true]);
-    expect(options.slice(1).every((o) => o.type === ApplicationCommandOptionType.Attachment && !o.required)).toBe(true);
-    expect(options.map((o) => o.name)).toEqual(WHISPER_OPTIONS);
+    expect(options).toHaveLength(MAX_PICTURES + 1);
+    expect(options.slice(0, MAX_PICTURES).every((o) => o.type === ApplicationCommandOptionType.Attachment)).toBe(true);
+    expect(options.map((o) => o.name)).toEqual([...WHISPER_OPTIONS, HELP_OPTION]);
+  });
+
+  it("gives every command and /lead subcommand an optional help, and nothing required", () => {
+    for (const c of buildCommands({ ...all, siege: url })) {
+      if (c.name === "help") continue;
+      const holders = c.name === "lead" ? (c.options ?? []).map((s) => ("options" in s ? s.options ?? [] : [])) : [c.options ?? []];
+      for (const options of holders) {
+        expect(options.at(-1)).toMatchObject({ name: HELP_OPTION, type: ApplicationCommandOptionType.Boolean });
+        expect(options.some((o) => o.required)).toBe(false);
+      }
+    }
+  });
+
+  it("lets /help pick a member command of the linked sheets, never /lead", () => {
+    const help = buildCommands({ events: url }).find((c) => c.name === "help");
+    const command = help?.options?.[0];
+    expect(command && "choices" in command ? command.choices?.map((c) => c.value) : undefined).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir"]);
   });
 
   it("adds one member command per text of each linked sheet, and /lead last", () => {
     expect(buildCommands(all).map((c) => c.name)).toEqual([
-      "iam", "whisper", "overlay", "farms", "player", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "lead",
+      "iam", "whisper", "overlay", "farms", "player", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "help", "lead",
     ]);
-    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir", "lead"]);
+    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir", "help", "lead"]);
   });
 
   it("puts /player with Alliance Statistics, where the cards come from", () => {
@@ -39,17 +55,20 @@ describe("buildCommands", () => {
     expect(buildCommands({ stats: url }).map((c) => c.name)).toContain("player");
   });
 
-  it("gives member commands nothing to pick and no option to post; /ad only an optional tomorrow", () => {
-    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "lead", "ad"].includes(c.name));
+  it("gives member commands nothing to pick but help, and no option to post; /ad also an optional tomorrow", () => {
+    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "lead", "ad", "help"].includes(c.name));
     expect(plain.map((c) => c.name)).toEqual(["farms", "schedule", "today", "rules", "driverguide", "events", "elixir", "kvk"]);
     for (const c of plain) {
-      expect(c.options ?? []).toEqual([]);
+      expect(c.options?.map((o) => o.name)).toEqual([HELP_OPTION]);
       expect(c.default_member_permissions ?? null).toBeNull();
     }
     const ad = buildCommands(all).find((c) => c.name === "ad");
-    expect(ad?.options?.map((o) => [o.name, o.type, o.required ?? false])).toEqual([["tomorrow", ApplicationCommandOptionType.Boolean, false]]);
+    expect(ad?.options?.map((o) => [o.name, o.type, o.required ?? false])).toEqual([
+      ["tomorrow", ApplicationCommandOptionType.Boolean, false],
+      [HELP_OPTION, ApplicationCommandOptionType.Boolean, false],
+    ]);
     const player = buildCommands(all).find((c) => c.name === "player");
-    expect(player?.options?.map((o) => o.name)).toEqual(["name"]);
+    expect(player?.options?.map((o) => o.name)).toEqual(["name", HELP_OPTION]);
   });
 
   it("hides /lead from members who can't manage roles", () => {
@@ -91,5 +110,30 @@ describe("leadText", () => {
     expect(leadText("post", "nope")).toBeUndefined();
     expect(leadText("vote", "schedule")).toBeUndefined();
     expect(leadText("link", null)).toBeUndefined();
+  });
+});
+
+describe("wantsHelp", () => {
+  const o = (name: string, value: unknown = "x") => ({ name, value });
+
+  it("shows the help when asked for", () => {
+    expect(wantsHelp("schedule", [o(HELP_OPTION, true)])).toBe(true);
+    expect(wantsHelp("iam", [o("name"), o(HELP_OPTION, true)])).toBe(true);
+    expect(wantsHelp("lead driver", [o(HELP_OPTION, true)])).toBe(true);
+    expect(wantsHelp("schedule", [o(HELP_OPTION, false)])).toBe(false);
+    expect(wantsHelp("schedule", [])).toBe(false);
+  });
+
+  it("shows the help when something the command needs is missing", () => {
+    expect(wantsHelp("iam", [])).toBe(true);
+    expect(wantsHelp("iam", [o("name")])).toBe(false);
+    expect(wantsHelp("player", [])).toBe(true);
+    expect(wantsHelp("whisper", [])).toBe(true);
+    expect(wantsHelp("whisper", [o("picture3")])).toBe(false);
+    expect(wantsHelp("lead link", [o("user")])).toBe(true);
+    expect(wantsHelp("lead link", [o("user"), o("name")])).toBe(false);
+    expect(wantsHelp("lead post", [])).toBe(true);
+    expect(wantsHelp("lead vote", [o("which")])).toBe(false);
+    expect(wantsHelp("overlay", [])).toBe(false);
   });
 });

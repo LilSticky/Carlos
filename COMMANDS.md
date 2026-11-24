@@ -11,6 +11,15 @@ with everything else.
   today). A server admin can change who sees it under *Server Settings > Integrations > Carlos*. Seeing it is
   not enough: Carlos still checks the rank, and only R4 and R5 on the sheet's member list may use it. Discord
   roles decide only who sees the command.
+- **Member commands answer in the channel for everyone** when they only show alliance texts, cards or the farm
+  list. Only `/iam`, `/whisper`, `/overlay`, `/me` and `/lead` answer privately. Errors and refusals are always private: a
+  failed public command leaves nothing in the channel. When someone else picks from the menu under a `/player`
+  card, they get that card privately and the shared one stays as it is.
+- **Every command explains itself.** Each command and `/lead` subcommand has an optional `help` option: with
+  `help: True` Carlos shows, only to the asker, what the command is for and examples of how to use it. Discord marks
+  no option as required, so that `help` works on its own; a command run without what it needs (`/iam` without a
+  name, `/whisper` without a picture) shows its help too. `/help` lists all commands; officers also see the `/lead`
+  part. The texts are in `src/discord/help.ts`.
 - **Member numbers stay private.** AD scores and donations are shown to the member themselves (`/me`) and to
   officers (`/lead stats`), never to other members.
 - **The logic stays in the sheets** (`AGENTS.md`): every command calls an existing sheet action.
@@ -33,7 +42,7 @@ with everything else.
 | `/ad [tomorrow]` | The AD notice for today, or for tomorrow | Events `ad` (offset 0 or 1) |
 | `/elixir` | The Elixir Scramble teams | Events `elixir` |
 | `/kvk` | Who comes to the KvK battle | KvK `roster` |
-| `/help` | These commands in plain words; officers also see the `/lead` part | none |
+| `/help [command]` | These commands in plain words; officers also see the `/lead` part. With a command: how it works, with examples (the same as that command's `help: True`) | none |
 
 Screenshots in the upload channel stay as they are; they need no command. Neither do the R4 and R5 ranking
 recordings in the video inbox (`VIDEO_CHANNEL_ID`): Carlos sends them to the Upload Inbox (Members `kinds`,
@@ -58,5 +67,5 @@ recordings in the video inbox (`VIDEO_CHANNEL_ID`): Carlos sends them to the Upl
    `post`, `link`, `driver`, `notice`, `vote` and `stats`; `/farms`. `/coachman`, `/vote`, `/link` and the
    top-level `/stats` are gone. `/player` shows the combat card (built alongside).
 2. **`/me`.** Your own AD scores, donations and duties. No sheet change: Coachman `search` exists.
-3. **`/help`.** Texts in `src/discord/texts.ts`.
+3. ✅ **`/help`** and the `help` option on every command. Texts in `src/discord/help.ts`.
 4. **`/lead auto`** with the scheduled posts (daily caravan message, driver reminder DM).
