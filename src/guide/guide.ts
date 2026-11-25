@@ -3,7 +3,8 @@ import type { SheetKey } from "../config.js";
 import { memberHelp, type HelpEntry } from "../discord/help.js";
 
 /**
- * The guide forum: one forum post per topic that explains what Carlos does for members. Carlos posts them in
+ * The guide forum: a start post, one post per channel Carlos posts in by himself (the announcement channel, the upload
+ * channel) and one per public command. Carlos posts them in
  * GUIDE_FORUM_ID and edits them whenever this file, the /help texts or an example picture changes, so the forum stays
  * in step with what Carlos can do. Officer features (/lead, the video inbox) are not explained here.
  *
@@ -99,13 +100,6 @@ export const SCREENSHOT_GROUPS: readonly { key: string; title: string; kinds: re
 /** Every kind the guide explains. */
 export const SCREENSHOT_KINDS: readonly ScreenshotKind[] = SCREENSHOT_GROUPS.flatMap((g) => g.kinds);
 
-/** One line per command: name, what it does, one example. The details are in each command's help option. */
-function commandLine(e: HelpEntry): string {
-  const ex = e.examples[0];
-  const typed = ex && ex[0] !== `/${e.name}` ? ` Example: \`${ex[0]}\`` : "";
-  return `**/${e.name}**: ${e.summary}.${typed}`;
-}
-
 /** Sections packed into as few messages as fit, in order; a section is never split. */
 export function pack(sections: readonly string[], limit = MAX_MESSAGE): string[] {
   const out: string[] = [];
@@ -117,107 +111,88 @@ export function pack(sections: readonly string[], limit = MAX_MESSAGE): string[]
   return out;
 }
 
-function commandPost(key: string, title: string, intro: string, entries: readonly HelpEntry[], tags: readonly string[]): GuidePost | undefined {
-  if (!entries.length) return undefined;
-  const parts = pack([`# ${title}\n${intro}`, entries.map(commandLine).join("\n"), FOOTER]).map((text) => ({ text }));
-  return { key, title, tags, parts };
+/** What a command post adds to the command's /help text: where it ties in with a channel. */
+const COMMAND_NOTES: Readonly<Record<string, (ctx: GuideContext) => string>> = {
+  iam: (ctx) => `Do this first: without it Carlos cannot tell whose screenshots arrive in <#${ctx.uploadChannelId}>.`,
+  whisper: (ctx) => `Which screens Carlos can read: see the post about <#${ctx.uploadChannelId}>.`,
+  rotation: (ctx) => `Each day Carlos also posts the caravan message in <#${ctx.announceChannelId}> and tags the driver.`,
+};
+
+/** One post per public command: what it does, examples, and how it ties in with a channel. */
+function commandPost(e: HelpEntry, ctx: GuideContext): GuidePost {
+  // "This list" says nothing outside /help itself
+  const title = e.name === "help" ? "/help: every command and how it works" : `/${e.name}: ${e.summary}`;
+  const examples = e.examples.map(([typed, does]) => `- \`${typed}\`: ${does}`).join("\n");
+  const note = COMMAND_NOTES[e.name]?.(ctx);
+  return {
+    key: `cmd-${e.name}`,
+    title: title.length <= MAX_TITLE ? title : `/${e.name}`,
+    tags: ["Commands"],
+    parts: [{ text: `# **/${e.name}**\n${e.details}\n\n${examples}${note ? `\n\n${note}` : ""}\n\n${FOOTER}` }],
+  };
 }
 
 /** The posts for this server: only what Carlos offers here (sheets with a link). */
 export function guidePosts(ctx: GuideContext): GuidePost[] {
-  const help = memberHelp(ctx.sheets);
-  const pick = (...names: string[]) => names.map((n) => help.find((e) => e.name === n)).filter((e): e is HelpEntry => !!e);
   const upload = `<#${ctx.uploadChannelId}>`;
-  const posts: (GuidePost | undefined)[] = [];
+  const announce = `<#${ctx.announceChannelId}>`;
+  const channels: GuidePost[] = [];
 
-  posts.push({
+  // the announcement channel: everything Carlos posts there by himself
+  const announced: string[] = [];
+  if (ctx.sheets.coachman) {
+    announced.push("## Coachman Express\nEvery day the caravan message, three hours before set-up. The driver of the day is tagged.");
+  }
+  if (ctx.sheets.kvk) {
+    announced.push(
+      "## KvK vote\nBefore each Royal City battle on Day VI: press **Participate** or **Stay out**. You can change it until Day VI " +
+        "starts; please vote in game too, it shows your Might. Then Carlos posts who comes and how strong we are.",
+    );
+  }
+  if (ctx.sheets.siege) {
+    announced.push(
+      "## Undead Siege\nBefore each siege: press **Participate**, or **Stay out** if your plans change. Shortly before the start " +
+        "Carlos posts the defense plan. If you are mentioned, send your squads.",
+    );
+  }
+  if (announced.length) {
+    channels.push({
+      key: "announce",
+      title: "Event announcements: what Carlos posts there",
+      tags: ["Channels"],
+      parts: pack([`# ${announce}\nCarlos posts here by himself. Keep an eye on it.`, ...announced, FOOTER]).map((text) => ({ text })),
+    });
+  }
+
+  // the upload channel: how to send, then every screen Carlos reads, with examples
+  channels.push({
     key: "send",
-    title: "How to send screenshots",
-    tags: ["Screenshots"],
-    parts: pack([
-      "# How to send screenshots\n" +
-        `- Post up to **10 screenshots at once** in ${upload}. No text needed, no cropping.\n` +
-        "- Carlos reads them for you, and the officers get the numbers.\n" +
-        "- Something went wrong? Press **Retry** under Carlos's answer.\n" +
-        "- Every report earns **intel points**: see the **Intel Scoreboard** post.\n" +
-        "- Which screens: see the **What to screenshot** posts.",
-      pick("whisper", "overlay").map(commandLine).join("\n"),
-      FOOTER,
-    ]).map((text) => ({ text })),
-  });
-
-  for (const g of SCREENSHOT_GROUPS) {
-    posts.push({
-      key: g.key,
-      title: g.title,
-      tags: ["Screenshots"],
-      parts: [
-        { text: `# ${g.title}\nPost them in ${upload}. One example per screen below.` },
+    title: "Report inbox: send your screenshots",
+    tags: ["Channels", "Screenshots"],
+    parts: [
+      {
+        text:
+          `# ${upload}\n` +
+          "- Post up to **10 screenshots at once**. No text needed, no cropping.\n" +
+          "- Carlos reads them for you, and the officers get the numbers. Every report earns **intel points**.\n" +
+          "- Something went wrong? Press **Retry** under Carlos's answer.\n" +
+          "- Private? Use **/whisper** instead.\n\n" +
+          "Which screens, with an example of each:",
+      },
+      ...SCREENSHOT_GROUPS.flatMap((g): GuidePart[] => [
+        { text: `## ${g.title.replace("What to screenshot: ", "").replace(/^./, (c) => c.toUpperCase())}` },
         ...g.kinds.flatMap((k): GuidePart[] => [
-          { text: `## ${k.name}\n${k.how}`, ...(k.tabs ? {} : { image: k.key }) },
+          { text: `### ${k.name}\n${k.how}`, ...(k.tabs ? {} : { image: k.key }) },
           ...(k.tabs ?? []).map((tab, t) => ({ text: `**Tab ${t + 1} of ${k.tabs!.length}: ${tab}**`, image: `${k.key}-${t + 1}` })),
           ...(k.note ? [{ text: k.note.text, image: k.note.image }] : []),
         ]),
-        { text: FOOTER },
-      ],
-    });
-  }
+      ]),
+      { text: FOOTER },
+    ],
+  });
 
-  posts.push(
-    commandPost("cards", "Player and alliance cards", "Look up any player or alliance.", pick("player", "whois", "alliance"), ["Commands"]),
-    commandPost(
-      "farms",
-      "Farms: who to hit",
-      "Carlos makes sure two of us never hit the same farm.",
-      pick("farms"),
-      ["Commands"],
-    ),
-    commandPost(
-      "rotation",
-      "Coachman schedule: who drives this week",
-      `Times show in your own time. Each day Carlos also posts the caravan message in <#${ctx.announceChannelId}>, three hours before set-up, and tags the driver.`,
-      pick("rotation"),
-      ["Commands"],
-    ),
-    commandPost("faq", "FAQ: how to drive the coachman, house rules", "Only you see the answer.", pick("faq"), ["Commands"]),
-  );
-
-  if (ctx.sheets.kvk) {
-    posts.push({
-      key: "kvk-vote",
-      title: "KvK: say if you make it to the battle",
-      tags: ["Events"],
-      parts: [
-        {
-          text:
-            "# KvK: say if you make it to the battle\n" +
-            `- Before each Royal City battle on Day VI Carlos posts a vote in <#${ctx.announceChannelId}>. Press **Participate** or **Stay out**.\n` +
-            "- You can change your answer until Day VI starts. Your answer here counts over the in-game vote, but please vote in game too: it shows your Might.\n" +
-            "- When Day VI starts the vote closes and Carlos posts the KvK Readiness card: who comes and how strong we are.\n\n" +
-            FOOTER,
-        },
-      ],
-    });
-  }
-
-  if (ctx.sheets.siege) {
-    posts.push({
-      key: "siege",
-      title: "Undead Siege: sign up with one button",
-      tags: ["Events"],
-      parts: [
-        {
-          text:
-            "# Undead Siege: sign up with one button\n" +
-            `- Before each siege Carlos posts an invitation in <#${ctx.announceChannelId}>. Press **Participate**, or **Stay out** if your plans change.\n` +
-            "- Shortly before the start Carlos posts the defense plan there. If you are mentioned, send your squads.\n\n" +
-            FOOTER,
-        },
-      ],
-    });
-  }
-
-  const others = posts.filter((p): p is GuidePost => !!p);
+  const commands = memberHelp(ctx.sheets).map((e) => commandPost(e, ctx));
+  const list = (posts: readonly GuidePost[]) => posts.map((p) => `- ${p.title}`).join("\n");
   const start: GuidePost = {
     key: "start",
     title: "Start here: what Carlos does for you",
@@ -228,11 +203,12 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
         "1. Run **/iam** once with your in-game name.\n" +
         `2. Post game screenshots in ${upload}.\n` +
         "3. Type **/help** for all commands.",
-      `**The posts here:**\n${others.map((p) => `- ${p.title}`).join("\n")}`,
+      `**Channels:**\n${list(channels)}`,
+      `**Commands:**\n${list(commands)}`,
       FOOTER,
     ]).map((text) => ({ text })),
   };
-  return [start, ...others];
+  return [start, ...channels, ...commands];
 }
 
 /** The fingerprint of a post and its pictures: a change of either makes Carlos edit the post. */

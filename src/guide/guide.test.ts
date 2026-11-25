@@ -40,7 +40,7 @@ describe("guide posts", () => {
     expect(text(few)).not.toContain("**/rotation**");
     expect(text(all)).toContain("**/rotation**");
     expect(text(few)).not.toContain("Undead Siege");
-    expect(text(few)).not.toContain("KvK: say if");
+    expect(text(few)).not.toContain("KvK vote");
     expect(text(all)).toContain("**Stay out**");
   });
 
@@ -80,7 +80,7 @@ describe("fingerprint and pictures", () => {
     expect(pics("scout")).toEqual([]);
     expect(pics("battle-2").map((p) => p.name)).toEqual(["battle-2.png"]);
 
-    const post = guidePosts(all).find((p) => p.key === "shots-own")!;
+    const post = guidePosts(all).find((p) => p.key === "send")!;
     const before = fingerprint(post, pics);
     expect(fingerprint(post, pics)).toBe(before);
     writeFileSync(join(dir, "squads.png"), "two");
