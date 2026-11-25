@@ -85,6 +85,35 @@ export const MEMBER_HELP: readonly HelpEntry[] = [
     ],
   },
   {
+    name: "whois",
+    sheet: "members",
+    summary: "Any player of the game, from the tracker",
+    details:
+      "Looks a player up on the Last Asylum Tracker: Might, Sanctuary level, kills, alliance and rank, and where they " +
+      "sit on the map. Works for every player in every Kingdom. Give the complete name as in the game (the tracker has " +
+      "no partial match) or the uid from the profile; add the Kingdom when several players share a name. The tracker " +
+      "only knows what the map showed when someone last pressed Update Map, so the card says when that was. Everyone in " +
+      "the channel sees the card.",
+    examples: [
+      ["/whois name: Sam", "Sam's card. Several players called Sam? Pick the one you mean."],
+      ["/whois name: Sam kingdom: 101", "Only the Sam of Kingdom 101."],
+      ["/whois uid: 12345678", "The player with that uid."],
+    ],
+  },
+  {
+    name: "alliance",
+    sheet: "members",
+    summary: "An alliance and its members, from the tracker",
+    details:
+      "Looks an alliance up on the Last Asylum Tracker: Might, level, leader and its members by rank. Give the tag or " +
+      "the complete name; without a Kingdom Carlos looks in ours. Pick a member from the menu under the card to see " +
+      "their player card, only for you. Everyone in the channel sees the alliance card.",
+    examples: [
+      ["/alliance search: ABC", "The alliance [ABC] in our Kingdom."],
+      ["/alliance search: ABC kingdom: 101", "The alliance [ABC] in Kingdom 101."],
+    ],
+  },
+  {
     name: "schedule",
     sheet: TEXTS.schedule.sheet,
     summary: "This week's coachman schedule",

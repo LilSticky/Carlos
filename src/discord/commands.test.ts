@@ -14,8 +14,8 @@ describe("buildCommands", () => {
     expect(buildCommands({}).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "help", "lead"]);
   });
 
-  it("puts /farms with Alliance Members, which keeps the list", () => {
-    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "help", "lead"]);
+  it("puts /farms, /whois and /alliance with Alliance Members, which keeps the list and the tracker key", () => {
+    expect(buildCommands({ members: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "whois", "alliance", "help", "lead"]);
   });
 
   it("lets /whisper take up to 10 pictures, then help", () => {
@@ -45,7 +45,7 @@ describe("buildCommands", () => {
 
   it("adds one member command per text of each linked sheet, and /lead last", () => {
     expect(buildCommands(all).map((c) => c.name)).toEqual([
-      "iam", "whisper", "overlay", "farms", "player", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "help", "lead",
+      "iam", "whisper", "overlay", "farms", "player", "whois", "alliance", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "help", "lead",
     ]);
     expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir", "help", "lead"]);
   });
@@ -56,7 +56,7 @@ describe("buildCommands", () => {
   });
 
   it("gives member commands nothing to pick but help, and no option to post; /ad also an optional tomorrow", () => {
-    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "lead", "ad", "help"].includes(c.name));
+    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "whois", "alliance", "lead", "ad", "help"].includes(c.name));
     expect(plain.map((c) => c.name)).toEqual(["farms", "schedule", "today", "rules", "driverguide", "events", "elixir", "kvk"]);
     for (const c of plain) {
       expect(c.options?.map((o) => o.name)).toEqual([HELP_OPTION]);
@@ -69,6 +69,10 @@ describe("buildCommands", () => {
     ]);
     const player = buildCommands(all).find((c) => c.name === "player");
     expect(player?.options?.map((o) => o.name)).toEqual(["name", HELP_OPTION]);
+    const whois = buildCommands(all).find((c) => c.name === "whois");
+    expect(whois?.options?.map((o) => o.name)).toEqual(["name", "uid", "kingdom", HELP_OPTION]);
+    const alliance = buildCommands(all).find((c) => c.name === "alliance");
+    expect(alliance?.options?.map((o) => o.name)).toEqual(["search", "kingdom", HELP_OPTION]);
   });
 
   it("hides /lead from members who can't manage roles", () => {
@@ -128,6 +132,11 @@ describe("wantsHelp", () => {
     expect(wantsHelp("iam", [])).toBe(true);
     expect(wantsHelp("iam", [o("name")])).toBe(false);
     expect(wantsHelp("player", [])).toBe(true);
+    expect(wantsHelp("whois", [o("kingdom", 101)])).toBe(true);
+    expect(wantsHelp("whois", [o("uid")])).toBe(false);
+    expect(wantsHelp("whois", [o("name")])).toBe(false);
+    expect(wantsHelp("alliance", [])).toBe(true);
+    expect(wantsHelp("alliance", [o("search")])).toBe(false);
     expect(wantsHelp("whisper", [])).toBe(true);
     expect(wantsHelp("whisper", [o("picture3")])).toBe(false);
     expect(wantsHelp("lead link", [o("user")])).toBe(true);

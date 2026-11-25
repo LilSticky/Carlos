@@ -34,6 +34,8 @@ with everything else.
 | `/farms` | Untagged players with lots of resources; pick one to attack (cooldown), Gone? Retrace finds where it went | Members `farms`, `hit`, `retrace` |
 | `/me` | Your own card: this week's AD scores, donations, when you drive or guard | Coachman `search` for your linked name |
 | `/player name` | A player's combat card: squads, strength, intel from reports (members and other alliances) | Statistics `card`, `people` for autocomplete |
+| `/whois name\|uid [kingdom]` | Any player of the game from the Last Asylum Tracker: Might, alliance and rank, location; a pick list when several share the name | Members `trackerPlayer` |
+| `/alliance search [kingdom]` | An alliance by tag or full name (our Kingdom by default) with its members by rank; a menu shows a member's card privately | Members `trackerAlliance` |
 | `/schedule` | This week's coachman schedule (not while it is a draft) | Coachman `schedule` |
 | `/today` | Today's caravan message | Coachman `daily` |
 | `/rules` | The house rules | Coachman `rules` |
