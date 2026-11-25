@@ -35,7 +35,8 @@ const schema = z.object({
     STATS_URL: execLink.optional(),
     MEMBERS_URL: execLink,
     SIEGE_URL: execLink.optional(),
-    SIEGE_CHANNEL_ID: snowflake.optional(),
+    // the alliance's announcement channel; SIEGE_CHANNEL_ID (the old siege channel) is no longer read
+    ANNOUNCE_CHANNEL_ID: snowflake.default("1575230778902716446"),
     VIDEO_CHANNEL_ID: snowflake.optional(),
     GUIDE_FORUM_ID: snowflake.optional(),
 });
@@ -63,7 +64,7 @@ export function readConfig(env) {
         sheetSecret: e.SHEET_SECRET,
         dataDir: e.DATA_DIR,
         sheets: { ...sheets, members: e.MEMBERS_URL },
-        ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
+        announceChannelId: e.ANNOUNCE_CHANNEL_ID,
         ...(e.VIDEO_CHANNEL_ID ? { videoChannelId: e.VIDEO_CHANNEL_ID } : {}),
         ...(e.GUIDE_FORUM_ID ? { guideForumId: e.GUIDE_FORUM_ID } : {}),
     };

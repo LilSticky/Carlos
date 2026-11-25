@@ -28,6 +28,11 @@ export function readJoin(raw) {
     const p = joinAnswer.safeParse(raw);
     return p.success ? p.data : undefined;
 }
+const leaveAnswer = z.object({ run: z.string(), removed: z.boolean(), signedUp: z.array(z.string()) });
+export function readLeave(raw) {
+    const p = leaveAnswer.safeParse(raw);
+    return p.success ? p.data : undefined;
+}
 const planAnswer = z.object({
     run: z.string(),
     start: iso,
@@ -60,6 +65,8 @@ export function dueNow(next, posts, now) {
 /** Discord's own time markup: each reader sees their local time. */
 export const stamp = (d, style = "t") => `<t:${Math.floor(d.getTime() / 1000)}:${style}>`;
 export const SIEGE_BUTTON = "siege:";
+/** The Stay out button: takes a member off again until the start. */
+export const SIEGE_LEAVE = "siege-out:";
 const GREEN = 0x356854;
 function list(names, max = 1000) {
     if (!names.length)
@@ -83,7 +90,8 @@ export function inviteEmbed(next, closed = false) {
             ? `Started ${stamp(next.start, "R")}. Sign-ups are closed; the defense plan is posted below.`
             : [
                 `Starts at ${stamp(next.start)} (${stamp(next.start, "R")}).`,
-                "Will you be online at the start? Press **Participate**: your spare squads are planned in to reinforce the members who need them most.",
+                "Will you be online at the start? Press **Participate**: your spare squads are planned in to reinforce the members who need them most. " +
+                    "Plans changed? Press **Stay out** before the start.",
                 `The defense plan follows ${stamp(next.planAt, "R")}. Do not relocate until the siege is over.`,
             ].join("\n\n"),
         fields: [{ name: `Signed up (${next.signedUp.length})`, value: list(next.signedUp) }],

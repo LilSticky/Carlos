@@ -12,7 +12,10 @@ import { buildCommands, faqText, leadText, WHISPER_OPTIONS, wantsHelp } from "./
 import { findHelp, helpDetails, helpOverview } from "./help.js";
 import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
 import { overlayKey } from "../overlay/overlay.js";
-import { SIEGE_BUTTON } from "../siege/siege.js";
+import { SIEGE_BUTTON, SIEGE_LEAVE } from "../siege/siege.js";
+import { KVK_NO, KVK_YES } from "../kvk/kvk.js";
+import { kvkButton, startKvkBoard } from "./kvk-board.js";
+import { announce, HERE } from "./announce.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
 import { allianceEmbed, allianceNotFoundText, ambiguousText, matchOptions, playerArgs, playerEmbed, playerNotFoundText, readAllianceAnswer, readPlayerAnswer, rosterOptions, } from "../tracker/tracker.js";
 import { syncGuide } from "./guide-forum.js";
@@ -30,9 +33,11 @@ export async function connect(w) {
     client.once(Events.ClientReady, (ready) => {
         w.log(`Carlos is online as ${ready.user.tag}.`);
         void w.memberList.fresh().catch((e) => w.log(`Member list not loaded: ${String(e)}`));
-        // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
+        // the boards post by themselves in the announcement channel (ANNOUNCE_CHANNEL_ID)
         if (w.siege?.channelId)
             startSiegeBoard(ready, w.siege);
+        if (w.kvk?.channelId)
+            startKvkBoard(ready, w.kvk);
         if (w.guide)
             void syncGuide(ready, w.guide).catch((e) => w.log(`Guide forum not updated: ${String(e)}`));
         if (w.video)
@@ -58,7 +63,10 @@ export async function connect(w) {
         else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
             void retrace(interaction, w).catch((e) => w.log(`Retrace failed: ${String(e)}`));
         }
-        else if (interaction.isButton() && interaction.customId.startsWith(SIEGE_BUTTON) && w.siege) {
+        else if (interaction.isButton() && (interaction.customId.startsWith(KVK_YES) || interaction.customId.startsWith(KVK_NO)) && w.kvk) {
+            void kvkButton(interaction, w.kvk).catch((e) => w.log(`KvK answer failed: ${String(e)}`));
+        }
+        else if (interaction.isButton() && (interaction.customId.startsWith(SIEGE_BUTTON) || interaction.customId.startsWith(SIEGE_LEAVE)) && w.siege) {
             void siegeButton(interaction, w.siege).catch((e) => w.log(`Siege sign-up failed: ${String(e)}`));
         }
         else if (interaction.isButton() && interaction.customId.startsWith(RETRY_UPLOAD)) {
@@ -476,6 +484,16 @@ async function showText(interaction, key, post, isOfficer, w, codeBlock = !post 
         w.log(`${def.key} posted by ${interaction.user.id}.`);
     if (outcome.kind !== "shown") {
         await fail(interaction, exportText(outcome));
+        return;
+    }
+    const channelId = w.config.announceChannelId;
+    if (post && channelId) {
+        // announcements go to the announcement channel with @here, wherever /lead post was typed
+        const [first = "", ...rest] = toMessages(outcome.parts, codeBlock, 2000 - HERE.length - 1);
+        await announce(interaction.client, channelId, { content: `${HERE}\n${first}` }, true);
+        for (const content of rest)
+            await announce(interaction.client, channelId, { content }, false);
+        await interaction.editReply(`${exportText(outcome)} In <#${channelId}>.`);
         return;
     }
     await interaction.editReply(exportText(outcome));

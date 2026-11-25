@@ -109,7 +109,7 @@ function leadCommand(sheets) {
             .addStringOption((o) => o.setName("what").setDescription("Which message").addChoices(...choices)));
         c.addSubcommand((s) => s
             .setName("post")
-            .setDescription("Post a member text in this channel for everyone")
+            .setDescription("Post a member text in the announcement channel for everyone (@here)")
             .addStringOption((o) => o.setName("what").setDescription("Which text").addChoices(...choices)));
     }
     c.addSubcommand((s) => s

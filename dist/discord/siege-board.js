@@ -1,10 +1,11 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, } from "discord.js";
 import { SheetError } from "../sheet/sheet.js";
-import { dueNow, inviteEmbed, planEmbeds, planHelpers, readJoin, readNext, readPlan, SIEGE_BUTTON, stamp, } from "../siege/siege.js";
+import { dueNow, inviteEmbed, planEmbeds, planHelpers, readJoin, readLeave, readNext, readPlan, SIEGE_BUTTON, SIEGE_LEAVE, stamp, } from "../siege/siege.js";
+import { announce, HERE } from "./announce.js";
 const TICK_MS = 60_000;
 const ASK_MS = 5 * 60_000;
 function participateRow(run) {
-    return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(SIEGE_BUTTON + run).setLabel("Participate").setStyle(ButtonStyle.Success));
+    return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(SIEGE_BUTTON + run).setLabel("Participate").setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId(SIEGE_LEAVE + run).setLabel("Stay out").setStyle(ButtonStyle.Secondary));
 }
 /**
  * Asks the sheet for the next siege every few minutes and, every minute, posts what is due: the invitation, then the
@@ -56,8 +57,7 @@ async function textChannel(client, id) {
     return channel;
 }
 async function postInvite(client, next, d) {
-    const channel = await textChannel(client, d.channelId);
-    const msg = await channel.send({ embeds: [inviteEmbed(next)], components: [participateRow(next.run)] });
+    const msg = await announce(client, d.channelId, { content: HERE, embeds: [inviteEmbed(next)], components: [participateRow(next.run)] }, true);
     d.store.invited(next.run, d.channelId, msg.id);
     d.log(`Siege ${next.run}: invitation posted.`);
 }
@@ -109,8 +109,10 @@ async function closeInvite(client, plan, d) {
         d.log(`Siege ${plan.run}: invitation not closed (${String(e)}).`);
     }
 }
-/** The Participate button: signs the linked member up and updates the list on the invitation. */
+/** Participate or Stay out: signs the linked member up or off and updates the list on the invitation. */
 export async function siegeButton(interaction, d) {
+    if (interaction.customId.startsWith(SIEGE_LEAVE))
+        return siegeLeave(interaction, d);
     const run = interaction.customId.slice(SIEGE_BUTTON.length);
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const member = d.memberOf(interaction.user.id);
@@ -132,13 +134,41 @@ export async function siegeButton(interaction, d) {
     }
     d.log(`Siege ${run}: ${member} ${answer.added ? "signed up" : "pressed Participate again"}.`);
     await interaction.editReply(answer.added
-        ? `You are in, ${member}. Your spare squads are planned in; check the plan before the start.`
+        ? `You are in, ${member}. Your spare squads are planned in; check the plan before the start. Plans changed? Press **Stay out**.`
         : `You were already signed up, ${member}.`);
+    await showSignedUp(interaction, answer.signedUp);
+}
+async function showSignedUp(interaction, signedUp) {
     const embed = interaction.message.embeds[0];
     if (embed) {
-        const fields = [{ name: `Signed up (${answer.signedUp.length})`, value: answer.signedUp.join(", ").slice(0, 1000) || "Nobody yet." }];
+        const fields = [{ name: `Signed up (${signedUp.length})`, value: signedUp.join(", ").slice(0, 1000) || "Nobody yet." }];
         await interaction.message.edit({ embeds: [{ ...embed.toJSON(), fields }] }).catch(() => undefined);
     }
+}
+/** Stay out: takes the linked member off the siege again (until the start). */
+async function siegeLeave(interaction, d) {
+    const run = interaction.customId.slice(SIEGE_LEAVE.length);
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const member = d.memberOf(interaction.user.id);
+    if (!member) {
+        await interaction.editReply("Carlos does not know who you are in the game yet. Link your account with /iam first.");
+        return;
+    }
+    let answer;
+    try {
+        answer = readLeave(await d.callSheet("siege", "leave", { run, member }));
+    }
+    catch (e) {
+        await interaction.editReply(e instanceof SheetError ? e.message : "Something went wrong. Please try again.");
+        return;
+    }
+    if (!answer) {
+        await interaction.editReply("The Undead Siege sheet sent an answer Carlos cannot read.");
+        return;
+    }
+    d.log(`Siege ${run}: ${member} ${answer.removed ? "stays out" : "pressed Stay out without being signed up"}.`);
+    await interaction.editReply(answer.removed ? `You are off the list, ${member}. Press **Participate** if you can make it after all.` : `You were not signed up, ${member}.`);
+    await showSignedUp(interaction, answer.signedUp);
 }
 /** /lead siege: makes the plan now and posts it in this channel (the asker's reply is deferred, privately). */
 export async function siegeNow(interaction, d) {
