@@ -15,28 +15,31 @@ export interface ExportDef {
   readonly args?: Readonly<Record<string, unknown>>;
   /** Only R4 and R5 may see it (texts they send on, like the driver reminder or a vote list). */
   readonly officersOnly: boolean;
+  /** Reference a member looks up with /faq (how to drive, house rules), rather than a message to post. */
+  readonly faq: boolean;
   /** Written for Discord (Markdown) rather than for the in-game chat. */
   readonly discord: boolean;
 }
 
 /**
- * Every text, keyed by its own key. Members ask for theirs with one command each (/schedule, /today ...); officers
- * post those with /lead post and see the officer texts with /lead (driver, notice, vote).
+ * Every text, keyed by its own key. Messages to post are for R4 and R5 only: /lead text shows one to copy into the
+ * game, /lead post posts it in the channel, /lead driver, notice and vote show the officer texts. Members look the
+ * reference texts up with /faq.
  */
 export const TEXTS = {
-  schedule: { key: "schedule", label: "Weekly schedule", sheet: "coachman", action: "schedule", officersOnly: false, discord: false },
-  today: { key: "today", label: "Daily chat message", sheet: "coachman", action: "daily", officersOnly: false, discord: false },
-  rules: { key: "rules", label: "House rules", sheet: "coachman", action: "rules", officersOnly: false, discord: false },
-  driverguide: { key: "driverguide", label: "Driver guide", sheet: "coachman", action: "guide", officersOnly: false, discord: false },
-  events: { key: "events", label: "This week's events", sheet: "events", action: "week", officersOnly: false, discord: false },
-  "ad-today": { key: "ad-today", label: "AD notice: today", sheet: "events", action: "ad", args: { offset: 0 }, officersOnly: false, discord: false },
-  "ad-tomorrow": { key: "ad-tomorrow", label: "AD notice: tomorrow", sheet: "events", action: "ad", args: { offset: 1 }, officersOnly: false, discord: false },
-  elixir: { key: "elixir", label: "Elixir Scramble teams", sheet: "events", action: "elixir", officersOnly: false, discord: false },
-  kvk: { key: "kvk", label: "KvK roster", sheet: "kvk", action: "roster", officersOnly: false, discord: true },
-  driver: { key: "driver", label: "Driver reminder", sheet: "coachman", action: "driver", officersOnly: true, discord: false },
-  notice: { key: "notice", label: "Nominee notice", sheet: "coachman", action: "notice", officersOnly: true, discord: false },
-  nominees: { key: "nominees", label: "Special nomination vote", sheet: "stats", action: "votes", officersOnly: true, discord: false },
-  guards: { key: "guards", label: "Guard vote", sheet: "stats", action: "guards", officersOnly: true, discord: false },
+  schedule: { key: "schedule", label: "Weekly schedule", sheet: "coachman", action: "schedule", officersOnly: false, faq: false, discord: false },
+  today: { key: "today", label: "Daily chat message", sheet: "coachman", action: "daily", officersOnly: false, faq: false, discord: false },
+  rules: { key: "rules", label: "House rules", sheet: "coachman", action: "rules", officersOnly: false, faq: true, discord: false },
+  driverguide: { key: "driverguide", label: "Driver guide", sheet: "coachman", action: "guide", officersOnly: false, faq: true, discord: false },
+  events: { key: "events", label: "This week's events", sheet: "events", action: "week", officersOnly: false, faq: false, discord: false },
+  "ad-today": { key: "ad-today", label: "AD notice: today", sheet: "events", action: "ad", args: { offset: 0 }, officersOnly: false, faq: false, discord: false },
+  "ad-tomorrow": { key: "ad-tomorrow", label: "AD notice: tomorrow", sheet: "events", action: "ad", args: { offset: 1 }, officersOnly: false, faq: false, discord: false },
+  elixir: { key: "elixir", label: "Elixir Scramble teams", sheet: "events", action: "elixir", officersOnly: false, faq: false, discord: false },
+  kvk: { key: "kvk", label: "KvK roster", sheet: "kvk", action: "roster", officersOnly: false, faq: false, discord: true },
+  driver: { key: "driver", label: "Driver reminder", sheet: "coachman", action: "driver", officersOnly: true, faq: false, discord: false },
+  notice: { key: "notice", label: "Nominee notice", sheet: "coachman", action: "notice", officersOnly: true, faq: false, discord: false },
+  nominees: { key: "nominees", label: "Special nomination vote", sheet: "stats", action: "votes", officersOnly: true, faq: false, discord: false },
+  guards: { key: "guards", label: "Guard vote", sheet: "stats", action: "guards", officersOnly: true, faq: false, discord: false },
 } as const satisfies Record<string, ExportDef>;
 
 export type TextKey = keyof typeof TEXTS;
@@ -45,8 +48,11 @@ export function isTextKey(key: string | null): key is TextKey {
   return key !== null && Object.hasOwn(TEXTS, key);
 }
 
-/** The texts members may ask for, in this order; officers may post them for everyone. */
+/** The texts officers may show or post for everyone, in this order (not the officer-only ones). */
 export const MEMBER_TEXTS: readonly TextKey[] = (Object.keys(TEXTS) as TextKey[]).filter((k) => !TEXTS[k].officersOnly);
+
+/** The reference texts every member can look up with /faq. */
+export const FAQ_TEXTS: readonly TextKey[] = MEMBER_TEXTS.filter((k) => TEXTS[k].faq);
 
 const result = z.union([
   z.object({ text: z.string(), draft: z.boolean().optional(), lockedNow: z.boolean().optional() }),

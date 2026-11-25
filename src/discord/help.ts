@@ -114,65 +114,14 @@ export const MEMBER_HELP: readonly HelpEntry[] = [
     ],
   },
   {
-    name: "schedule",
-    sheet: TEXTS.schedule.sheet,
-    summary: "This week's coachman schedule",
-    details:
-      "Shows who drives the coachman and who guards on each day of the week. While the officers still plan next " +
-      "week, Carlos says so instead.",
-    examples: [["/schedule", "The schedule, for everyone in the channel."]],
-  },
-  {
-    name: "today",
-    sheet: TEXTS.today.sheet,
-    summary: "Today's coachman message",
-    details: "Shows today's coachman message, written for the alliance chat in the game.",
-    examples: [["/today", "Today's message, ready to copy into the game."]],
-  },
-  {
-    name: "rules",
-    sheet: TEXTS.rules.sheet,
-    summary: "The coachman house rules",
-    details: "Shows the house rules of the coachman rotation.",
-    examples: [["/rules", "The house rules."]],
-  },
-  {
-    name: "driverguide",
+    name: "faq",
     sheet: TEXTS.driverguide.sheet,
-    summary: "How to drive the coachman",
-    details: "Shows the driver guide: what to do step by step when it is your turn to drive.",
-    examples: [["/driverguide", "The driver guide."]],
-  },
-  {
-    name: "events",
-    sheet: TEXTS.events.sheet,
-    summary: "This week's events",
-    details: "Shows this week's events and what members do for them.",
-    examples: [["/events", "This week's events."]],
-  },
-  {
-    name: "ad",
-    sheet: TEXTS["ad-today"].sheet,
-    summary: "The Alliance Duel notice for today or tomorrow",
-    details: "Shows the Alliance Duel notice for today. Add **tomorrow: True** to prepare a day ahead.",
+    summary: "Look something up: how to drive the coachman, the house rules",
+    details: "Shows a guide from the officers' sheets, only to you. Pick the topic from the list.",
     examples: [
-      ["/ad", "Today's notice."],
-      ["/ad tomorrow: True", "Tomorrow's notice."],
+      ["/faq topic: Driver guide", "What to do when it is your turn to drive."],
+      ["/faq topic: House rules", "The rules of the coachman rotation."],
     ],
-  },
-  {
-    name: "elixir",
-    sheet: TEXTS.elixir.sheet,
-    summary: "The Elixir Scramble teams",
-    details: "Shows the teams for the Elixir Scramble: who plays in which team.",
-    examples: [["/elixir", "The teams."]],
-  },
-  {
-    name: "kvk",
-    sheet: TEXTS.kvk.sheet,
-    summary: "Who comes to the KvK battle",
-    details: "Shows the roster for the KvK battle: who has signed up to fight.",
-    examples: [["/kvk", "The roster."]],
   },
   {
     name: "help",
@@ -190,14 +139,25 @@ const POSTABLE = MEMBER_TEXTS.map((k) => TEXTS[k].label.toLowerCase()).join(", "
 
 export const LEAD_HELP: readonly HelpEntry[] = [
   {
-    name: "lead post",
-    summary: "Post a member text in this channel for everyone",
+    name: "lead text",
+    summary: "A message for the alliance, only to you, to copy into the game",
     details:
-      `Posts one of the member texts in this channel, for everyone to read: ${POSTABLE}. ` +
-      "Posting the weekly schedule locks it in, so members can see it with **/schedule**.",
+      `Shows one of the alliance messages only to you, in a box that copies cleanly into the game chat: ${POSTABLE}. ` +
+      "Showing the weekly schedule while it is still a draft does not lock it in.",
+    examples: [
+      ["/lead text what: Daily chat message", "Today's coachman message, to copy."],
+      ["/lead text what: AD notice: tomorrow", "Tomorrow's Alliance Duel notice, to copy."],
+    ],
+  },
+  {
+    name: "lead post",
+    summary: "Post an alliance message in this channel for everyone",
+    details:
+      `Posts one of the alliance messages in this channel, for everyone to read: ${POSTABLE}. ` +
+      "Posting the weekly schedule locks it in.",
     examples: [
       ["/lead post what: Weekly schedule", "Posts the schedule and locks it in."],
-      ["/lead post what: AD notice: tomorrow", "Posts tomorrow's Alliance Duel notice."],
+      ["/lead post what: KvK roster", "Posts who comes to the KvK battle."],
     ],
   },
   {
@@ -259,9 +219,10 @@ export function memberHelp(sheets: Sheets): HelpEntry[] {
   return MEMBER_HELP.filter((e) => offered(e, sheets));
 }
 
-/** The /lead subcommands on this server (post needs at least one linked text). */
+/** The /lead subcommands on this server (text and post need at least one linked text). */
 export function leadHelp(sheets: Sheets): HelpEntry[] {
-  return LEAD_HELP.filter((e) => offered(e, sheets) && (e.name !== "lead post" || MEMBER_TEXTS.some((k) => sheets[TEXTS[k].sheet])));
+  const texts = MEMBER_TEXTS.some((k) => sheets[TEXTS[k].sheet]);
+  return LEAD_HELP.filter((e) => offered(e, sheets) && (!["lead text", "lead post"].includes(e.name) || texts));
 }
 
 /** The help entry of a command, "lead post" for a subcommand. */

@@ -31,9 +31,8 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
   reports. No AD scores, donations or other member numbers.
 - **/farms**: players without an alliance tag with lots of resources, from scout reports. Pick the one you
   attack: it goes on cooldown under your name. Not there any more? **Gone? Retrace** asks the tracker where it went.
-- **/schedule**, **/today**, **/rules**, **/driverguide**, **/events**, **/ad** `[tomorrow]`, **/elixir**,
-  **/kvk**: the texts the sheets' menus export. In-game texts come in code blocks so they copy cleanly.
-  Members never see a draft schedule.
+- **/faq** `topic`: the driver guide or the house rules, only to the asker. The alliance messages (schedule,
+  daily message, events, AD notice, Elixir teams, KvK roster) are for R4 and R5: **/lead text** and **/lead post**.
 - **The guide forum** (`GUIDE_FORUM_ID`): one forum post per topic that explains Carlos to members: how to
   send screenshots, which screens Carlos can read (each with example pictures from `guide/`), the cards, farms,
   texts and the Undead Siege. The texts live in `src/guide/guide.ts` and reuse the /help texts. On every start

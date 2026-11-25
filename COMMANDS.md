@@ -38,14 +38,7 @@ with everything else.
 | `/player name` | A player's combat card: squads, strength, intel from reports (members and other alliances) | Statistics `card`, `people` for autocomplete |
 | `/whois name\|uid [kingdom]` | Any player of the game from the Last Asylum Tracker: Might, alliance and rank, location; a pick list when several share the name | Members `trackerPlayer` |
 | `/alliance search [kingdom]` | An alliance by tag or full name (our Kingdom by default) with its members by rank; a menu shows a member's card privately | Members `trackerAlliance` |
-| `/schedule` | This week's coachman schedule (not while it is a draft) | Coachman `schedule` |
-| `/today` | Today's caravan message | Coachman `daily` |
-| `/rules` | The house rules | Coachman `rules` |
-| `/driverguide` | The driver guide | Coachman `guide` |
-| `/events` | This week's events | Events `week` |
-| `/ad [tomorrow]` | The AD notice for today, or for tomorrow | Events `ad` (offset 0 or 1) |
-| `/elixir` | The Elixir Scramble teams | Events `elixir` |
-| `/kvk` | Who comes to the KvK battle | KvK `roster` |
+| `/faq topic` | A reference text to read, only to the asker: the driver guide or the house rules | Coachman `guide`, `rules` |
 | `/help [command]` | These commands in plain words; officers also see the `/lead` part. With a command: how it works, with examples (the same as that command's `help: True`) | none |
 
 Screenshots in the upload channel stay as they are; they need no command. Neither do the R4 and R5 ranking
@@ -54,9 +47,13 @@ recordings in the video inbox (`VIDEO_CHANNEL_ID`): Carlos sends them to the Upl
 
 ## Leadership: `/lead`
 
+Every command that makes a message to post (schedule, daily message, events, AD notice, Elixir teams, KvK roster) is
+here, not with the member commands.
+
 | Subcommand | Does | Sheet action |
 |---|---|---|
-| `/lead post what` | Posts a member text in this channel for everyone. `what`: schedule, today, rules, driverguide, events, ad today, ad tomorrow, elixir, kvk. Posting the schedule locks it in. | as above |
+| `/lead text what` | An alliance message only to the officer, in a code block to copy into the game. `what`: schedule, today, rules, driverguide, events, ad today, ad tomorrow, elixir, kvk | Coachman `schedule`, `daily`, `rules`, `guide`; Events `week`, `ad` (offset 0 or 1), `elixir`; KvK `roster` |
+| `/lead post what` | Posts the same messages in this channel for everyone. Posting the schedule locks it in. | as above |
 | `/lead link user name` | Sets which member a Discord account is | upload `members` |
 | `/lead driver` | The driver reminder to send on | Coachman `driver` |
 | `/lead notice` | The nominee notice | Coachman `notice` |

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
 import { MAX_PICTURES } from "../uploads/upload.js";
-import { buildCommands, HELP_OPTION, leadText, memberText, wantsHelp, WHISPER_OPTIONS } from "./commands.js";
+import { buildCommands, faqText, HELP_OPTION, leadText, wantsHelp, WHISPER_OPTIONS } from "./commands.js";
 
 type Sheets = Parameters<typeof buildCommands>[0];
 const url = "https://script.google.com/macros/s/x/exec";
@@ -38,16 +38,18 @@ describe("buildCommands", () => {
   });
 
   it("lets /help pick a member command of the linked sheets, never /lead", () => {
-    const help = buildCommands({ events: url }).find((c) => c.name === "help");
+    const help = buildCommands({ coachman: url, events: url }).find((c) => c.name === "help");
     const command = help?.options?.[0];
-    expect(command && "choices" in command ? command.choices?.map((c) => c.value) : undefined).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir"]);
+    expect(command && "choices" in command ? command.choices?.map((c) => c.value) : undefined).toEqual(["iam", "whisper", "overlay", "faq"]);
   });
 
-  it("adds one member command per text of each linked sheet, and /lead last", () => {
-    expect(buildCommands(all).map((c) => c.name)).toEqual([
-      "iam", "whisper", "overlay", "farms", "player", "whois", "alliance", "schedule", "today", "rules", "driverguide", "events", "ad", "elixir", "kvk", "help", "lead",
-    ]);
-    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "events", "ad", "elixir", "help", "lead"]);
+  it("offers members no message texts, only /faq with Coachman Express, and /lead last", () => {
+    expect(buildCommands(all).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "player", "whois", "alliance", "faq", "help", "lead"]);
+    expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "help", "lead"]);
+    const faq = buildCommands(all).find((c) => c.name === "faq");
+    const topic = faq?.options?.[0];
+    expect(topic && "choices" in topic ? topic.choices?.map((c) => c.value) : undefined).toEqual(["rules", "driverguide"]);
+    expect(faq?.default_member_permissions ?? null).toBeNull();
   });
 
   it("puts /player with Alliance Statistics, where the cards come from", () => {
@@ -55,18 +57,10 @@ describe("buildCommands", () => {
     expect(buildCommands({ stats: url }).map((c) => c.name)).toContain("player");
   });
 
-  it("gives member commands nothing to pick but help, and no option to post; /ad also an optional tomorrow", () => {
-    const plain = buildCommands(all).filter((c) => !["iam", "whisper", "overlay", "player", "whois", "alliance", "lead", "ad", "help"].includes(c.name));
-    expect(plain.map((c) => c.name)).toEqual(["farms", "schedule", "today", "rules", "driverguide", "events", "elixir", "kvk"]);
-    for (const c of plain) {
-      expect(c.options?.map((o) => o.name)).toEqual([HELP_OPTION]);
-      expect(c.default_member_permissions ?? null).toBeNull();
-    }
-    const ad = buildCommands(all).find((c) => c.name === "ad");
-    expect(ad?.options?.map((o) => [o.name, o.type, o.required ?? false])).toEqual([
-      ["tomorrow", ApplicationCommandOptionType.Boolean, false],
-      [HELP_OPTION, ApplicationCommandOptionType.Boolean, false],
-    ]);
+  it("gives the member commands their options and help", () => {
+    const farms = buildCommands(all).find((c) => c.name === "farms");
+    expect(farms?.options?.map((o) => o.name)).toEqual([HELP_OPTION]);
+    expect(farms?.default_member_permissions ?? null).toBeNull();
     const player = buildCommands(all).find((c) => c.name === "player");
     expect(player?.options?.map((o) => o.name)).toEqual(["name", HELP_OPTION]);
     const whois = buildCommands(all).find((c) => c.name === "whois");
@@ -81,29 +75,33 @@ describe("buildCommands", () => {
 
   it("gives /lead the subcommands of the linked sheets", () => {
     expect(subcommands({})).toEqual(["link"]);
-    expect(subcommands(all)).toEqual(["post", "link", "driver", "notice", "vote", "stats"]);
+    expect(subcommands(all)).toEqual(["text", "post", "link", "driver", "notice", "vote", "stats"]);
     expect(subcommands({ stats: url })).toEqual(["link", "vote", "stats"]);
   });
 
-  it("lets /lead post only the member texts of linked sheets", () => {
-    const post = lead({ kvk: url, events: url })?.options?.find((o) => o.name === "post");
-    const what = post && "options" in post ? post.options?.[0] : undefined;
-    expect(what && "choices" in what ? what.choices?.map((c) => c.value) : undefined).toEqual(["events", "ad-today", "ad-tomorrow", "elixir", "kvk"]);
+  it("lets /lead text and post only the alliance messages of linked sheets", () => {
+    for (const sub of ["text", "post"]) {
+      const s = lead({ kvk: url, events: url })?.options?.find((o) => o.name === sub);
+      const what = s && "options" in s ? s.options?.[0] : undefined;
+      expect(what && "choices" in what ? what.choices?.map((c) => c.value) : undefined).toEqual(["events", "ad-today", "ad-tomorrow", "elixir", "kvk"]);
+    }
   });
 });
 
-describe("memberText", () => {
-  it("names the text a member command shows", () => {
-    expect(memberText("today", false)).toBe("today");
-    expect(memberText("ad", false)).toBe("ad-today");
-    expect(memberText("ad", true)).toBe("ad-tomorrow");
-    expect(memberText("iam", false)).toBeUndefined();
+describe("faqText", () => {
+  it("shows only the reference texts", () => {
+    expect(faqText("driverguide")).toBe("driverguide");
+    expect(faqText("rules")).toBe("rules");
+    expect(faqText("today")).toBeUndefined();
+    expect(faqText("driver")).toBeUndefined();
+    expect(faqText(null)).toBeUndefined();
   });
 });
 
 describe("leadText", () => {
   it("names the text a /lead subcommand shows", () => {
     expect(leadText("post", "schedule")).toBe("schedule");
+    expect(leadText("text", "ad-tomorrow")).toBe("ad-tomorrow");
     expect(leadText("driver", null)).toBe("driver");
     expect(leadText("notice", null)).toBe("notice");
     expect(leadText("vote", "guards")).toBe("guards");
@@ -111,6 +109,7 @@ describe("leadText", () => {
 
   it("never posts an officer text, and refuses unknown choices", () => {
     expect(leadText("post", "driver")).toBeUndefined();
+    expect(leadText("text", "guards")).toBeUndefined();
     expect(leadText("post", "nope")).toBeUndefined();
     expect(leadText("vote", "schedule")).toBeUndefined();
     expect(leadText("link", null)).toBeUndefined();
@@ -142,6 +141,9 @@ describe("wantsHelp", () => {
     expect(wantsHelp("lead link", [o("user")])).toBe(true);
     expect(wantsHelp("lead link", [o("user"), o("name")])).toBe(false);
     expect(wantsHelp("lead post", [])).toBe(true);
+    expect(wantsHelp("lead text", [])).toBe(true);
+    expect(wantsHelp("faq", [])).toBe(true);
+    expect(wantsHelp("faq", [o("topic")])).toBe(false);
     expect(wantsHelp("lead vote", [o("which")])).toBe(false);
     expect(wantsHelp("overlay", [])).toBe(false);
   });

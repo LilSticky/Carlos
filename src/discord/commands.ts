@@ -7,7 +7,7 @@ import {
   type SlashCommandStringOption,
 } from "discord.js";
 import type { SheetKey } from "../config.js";
-import { isTextKey, MEMBER_TEXTS, TEXTS, type TextKey } from "../exports/exports.js";
+import { FAQ_TEXTS, isTextKey, MEMBER_TEXTS, TEXTS, type TextKey } from "../exports/exports.js";
 import { MAX_PICTURES } from "../uploads/upload.js";
 import { memberHelp } from "./help.js";
 
@@ -97,29 +97,32 @@ export const farmsCommand = withHelp(
     .setDMPermission(false),
 );
 
-/** The member commands that show one text each, with what they show. */
-const TEXT_COMMANDS: readonly { readonly name: string; readonly text: TextKey; readonly description: string }[] = [
-  { name: "schedule", text: "schedule", description: "This week's coachman schedule" },
-  { name: "today", text: "today", description: "Today's coachman message for the alliance chat" },
-  { name: "rules", text: "rules", description: "The coachman house rules" },
-  { name: "driverguide", text: "driverguide", description: "How to drive the coachman" },
-  { name: "events", text: "events", description: "This week's events" },
-  { name: "ad", text: "ad-today", description: "The Alliance Duel notice for today, or for tomorrow" },
-  { name: "elixir", text: "elixir", description: "The Elixir Scramble teams" },
-  { name: "kvk", text: "kvk", description: "Who comes to the KvK battle" },
-];
+/** /faq: the reference texts of the linked sheets (how to drive, house rules), one to pick. */
+function faqCommand(sheets: Sheets): CommandBuilder | undefined {
+  const topics = FAQ_TEXTS.filter((k) => sheets[TEXTS[k].sheet]);
+  if (!topics.length) return undefined;
+  return withHelp(
+    new SlashCommandBuilder()
+      .setName("faq")
+      .setDescription("Look something up: how to drive the coachman, the house rules")
+      .setDMPermission(false)
+      .addStringOption((o) =>
+        o.setName("topic").setDescription("What you want to know").addChoices(...topics.map((k) => ({ name: TEXTS[k].label, value: k }))),
+      ),
+  );
+}
 
-/** The text a member command shows; /ad shows tomorrow's notice when asked. */
-export function memberText(command: string, tomorrow: boolean): TextKey | undefined {
-  if (command === "ad" && tomorrow) return "ad-tomorrow";
-  return TEXT_COMMANDS.find((c) => c.name === command)?.text;
+/** The text /faq shows for a topic; only reference texts. */
+export function faqText(topic: string | null): TextKey | undefined {
+  return isTextKey(topic) && FAQ_TEXTS.includes(topic) ? topic : undefined;
 }
 
 const VOTES: readonly TextKey[] = ["nominees", "guards"];
 
-/** The text a /lead subcommand shows: posts only member texts, the vote only vote lists. */
+/** The text a /lead subcommand shows: text and post only member texts, the vote only vote lists. */
 export function leadText(subcommand: string, choice: string | null): TextKey | undefined {
   switch (subcommand) {
+    case "text":
     case "post":
       return isTextKey(choice) && MEMBER_TEXTS.includes(choice) ? choice : undefined;
     case "driver":
@@ -150,11 +153,18 @@ function leadCommand(sheets: Sheets): CommandBuilder {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
   const postable = MEMBER_TEXTS.filter((k) => sheets[TEXTS[k].sheet]);
   if (postable.length) {
+    const choices = postable.map((k) => ({ name: TEXTS[k].label, value: k }));
+    c.addSubcommand((s) =>
+      s
+        .setName("text")
+        .setDescription("A message for the alliance, only to you, ready to copy into the game")
+        .addStringOption((o) => o.setName("what").setDescription("Which message").addChoices(...choices)),
+    );
     c.addSubcommand((s) =>
       s
         .setName("post")
         .setDescription("Post a member text in this channel for everyone")
-        .addStringOption((o) => o.setName("what").setDescription("Which text").addChoices(...postable.map((k) => ({ name: TEXTS[k].label, value: k })))),
+        .addStringOption((o) => o.setName("what").setDescription("Which text").addChoices(...choices)),
     );
   }
   c.addSubcommand((s) =>
@@ -196,6 +206,8 @@ const NEEDS: Readonly<Record<string, readonly (readonly string[])[]>> = {
   whois: [["name", "uid"]],
   alliance: [["search"]],
   whisper: [WHISPER_OPTIONS],
+  faq: [["topic"]],
+  "lead text": [["what"]],
   "lead post": [["what"]],
   "lead link": [["user"], ["name"]],
   "lead vote": [["which"]],
@@ -229,12 +241,8 @@ export function buildCommands(sheets: Sheets): RESTPostAPIChatInputApplicationCo
   if (sheets.members) list.push(farmsCommand);
   if (sheets.stats) list.push(playerCommand);
   if (sheets.members) list.push(whoisCommand, allianceCommand);
-  for (const t of TEXT_COMMANDS) {
-    if (!sheets[TEXTS[t.text].sheet]) continue;
-    const c = new SlashCommandBuilder().setName(t.name).setDescription(t.description).setDMPermission(false);
-    if (t.name === "ad") c.addBooleanOption((o) => o.setName("tomorrow").setDescription("Tomorrow's notice instead of today's"));
-    list.push(withHelp(c));
-  }
+  const faq = faqCommand(sheets);
+  if (faq) list.push(faq);
   list.push(helpCommand(sheets), leadCommand(sheets));
   return list.map((c) => c.toJSON());
 }

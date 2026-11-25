@@ -27,7 +27,7 @@ import { suggestMembers, type MemberList } from "../members/members.js";
 import { SheetError } from "../sheet/sheet.js";
 import type { UploadDeps } from "../uploads/upload.js";
 import { sendUpload } from "../uploads/upload.js";
-import { buildCommands, leadText, memberText, WHISPER_OPTIONS, wantsHelp } from "./commands.js";
+import { buildCommands, faqText, leadText, WHISPER_OPTIONS, wantsHelp } from "./commands.js";
 import { findHelp, helpDetails, helpOverview } from "./help.js";
 import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
 import { overlayKey } from "../overlay/overlay.js";
@@ -147,7 +147,7 @@ async function autocomplete(interaction: AutocompleteInteraction, w: Wiring): Pr
 }
 
 /** Commands whose answer only the asker sees: linking, private screenshots, overlay keys and leadership. */
-const PRIVATE_COMMANDS: ReadonlySet<string> = new Set(["iam", "whisper", "overlay", "lead"]);
+const PRIVATE_COMMANDS: ReadonlySet<string> = new Set(["iam", "whisper", "overlay", "faq", "lead"]);
 
 /**
  * Shows an error or refusal only to the asker. A public answer's placeholder is removed first, so the channel
@@ -203,9 +203,10 @@ async function command(interaction: ChatInputCommandInteraction, w: Wiring): Pro
     await alliance(interaction, w);
   } else if (name === "lead") {
     await lead(interaction, w);
-  } else {
-    const text = memberText(name, interaction.options.getBoolean("tomorrow") ?? false);
-    if (text) await showText(interaction, text, false, officerCheck(interaction, w), w);
+  } else if (name === "faq") {
+    const text = faqText(interaction.options.getString("topic"));
+    if (text) await showText(interaction, text, false, officerCheck(interaction, w), w, false);
+    else await interaction.editReply("Pick one of the offered topics.");
   }
 }
 
@@ -506,13 +507,17 @@ async function stats(interaction: ChatInputCommandInteraction, w: Wiring): Promi
   await interaction.editReply({ embeds: statsEmbeds(answer), allowedMentions: NO_PINGS });
 }
 
-/** Shows a text to the asker, or posts it in the channel (officers only, checked by runExport). */
+/**
+ * Shows a text to the asker, or posts it in the channel (officers only, checked by runExport). `codeBlock`: in-game
+ * chat texts shown to copy go into code blocks; /faq shows its reference texts as plain text to read.
+ */
 async function showText(
   interaction: ChatInputCommandInteraction,
   key: TextKey,
   post: boolean,
   isOfficer: () => Promise<boolean>,
   w: Wiring,
+  codeBlock = !post && !TEXTS[key].discord,
 ): Promise<void> {
   const def = TEXTS[key];
   const outcome = await runExport(def, { post, isOfficer }, w.callSheet);
@@ -523,10 +528,9 @@ async function showText(
     return;
   }
   await interaction.editReply(exportText(outcome));
-  // posted: plain text; shown: in-game texts in code blocks, easy to copy into the game. Follow-ups are seen by
-  // whoever saw the first message (a /lead answer stays with the officer, a member command goes to everyone)
+  // follow-ups are seen by whoever saw the first message (a /lead or /faq answer stays with the asker)
   const quiet = !post && interaction.ephemeral === true;
-  const messages = toMessages(outcome.parts, !post && !def.discord);
+  const messages = toMessages(outcome.parts, codeBlock);
   for (const content of messages) {
     await interaction.followUp(quiet ? { content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS } : { content, allowedMentions: NO_PINGS });
   }

@@ -34,16 +34,19 @@ describe("guide posts", () => {
   it("explain every member command Carlos offers, and none he does not", () => {
     for (const ctx of [all, few]) {
       const t = text(ctx);
-      for (const e of memberHelp(ctx.sheets).filter((e) => e.name !== "help")) expect(t, `/${e.name}`).toContain(`### /${e.name}\n`);
+      for (const e of memberHelp(ctx.sheets).filter((e) => e.name !== "help")) expect(t, `/${e.name}`).toContain(`**/${e.name}**`);
       expect(t).toContain("**/help**");
     }
-    expect(text(few)).not.toContain("### /schedule");
+    expect(text(few)).not.toContain("**/schedule**");
     expect(text(few)).not.toContain("Undead Siege");
   });
 
   it("show every screenshot kind with a place for its example pictures", () => {
     const parts = guidePosts(all).flatMap((p) => p.parts);
-    for (const k of SCREENSHOT_KINDS) expect(parts.filter((p) => p.image === k.key)).toHaveLength(1);
+    for (const k of SCREENSHOT_KINDS) {
+      const want = k.tabs ? k.tabs.map((_, i) => `${k.key}-${i + 1}`) : [k.key];
+      expect(parts.filter((p) => p.image?.split("-")[0] === k.key).map((p) => p.image)).toEqual(want);
+    }
   });
 
   it("never explain officer commands", () => {
@@ -72,6 +75,7 @@ describe("fingerprint and pictures", () => {
     const pics = loadPictures(dir);
     expect(pics("battle").map((p) => p.name)).toEqual(["battle-1.jpg", "battle-2.png"]);
     expect(pics("scout")).toEqual([]);
+    expect(pics("battle-2").map((p) => p.name)).toEqual(["battle-2.png"]);
 
     const post = guidePosts(all).find((p) => p.key === "shots-own")!;
     const before = fingerprint(post, pics);

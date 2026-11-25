@@ -7,5 +7,8 @@ in number order). PNG, JPEG or WebP, each under 8 MB.
 Kinds: `squads`, `hero`, `roster`, `barracks`, `epigraph`, `battle`, `pve`, `scout`, `defense`, `arena`,
 `campaign`, `bosslog`, `bossrank` (the keys of `SCREENSHOT_KINDS`).
 
+The battle report has one message per tab, each with its own picture: `battle-1.png` Overview, `battle-2.png` Hero,
+`battle-3.png` Lineup, `battle-4.png` Battle Statistics.
+
 This repository is public: use screenshots you are fine showing to anyone, and cover names of players who did not
 agree. A new or changed picture is posted on the next start after the deploy.
