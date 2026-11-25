@@ -36,6 +36,20 @@ const screenshotSquad = z.object({
     might: num,
     heroes: z.array(z.object({ hero: z.string(), level: num, stars: num })).catch([]),
 });
+/** A row of the vault's Squad Roster (Rosters.js of Alliance Members): one lineup kept for one kind of fight. */
+const rosterRow = z.object({
+    group: z.string(),
+    setup: z.string(),
+    heroes: str,
+    factions: str,
+    bonus: str,
+    power: num,
+    powerFrom: str,
+    losses: num,
+    damage: num,
+    seen: str,
+    note: str,
+});
 const player = z.object({
     name: z.string(),
     member: z.boolean().catch(false),
@@ -74,6 +88,7 @@ const player = z.object({
         faction: str,
         squads: z.array(squad).catch([]),
         arena: z.object({ rank: num, points: num, tier: str, seen: str }).optional().catch(undefined),
+        roster: z.array(rosterRow).catch([]),
     })
         .optional()
         .catch(undefined),
@@ -213,12 +228,52 @@ function screenshotEmbed(p) {
         footer: { text: `Screenshot of ${s.date ?? "?"} · hero level/stars` },
     };
 }
+/** What a setup is ranked by: damage, soldiers lost, or power ("-" when no report showed it). */
+function rosterValue(r) {
+    if (/bait|fewest/i.test(r.setup))
+        return r.losses !== undefined ? `${r.losses.toLocaleString("en-US")} lost` : "-";
+    if (r.group === "Demon King" || /damage/i.test(r.setup))
+        return r.damage !== undefined ? `${short(r.damage)} damage` : "-";
+    if (r.power === undefined)
+        return "-";
+    return /might/i.test(r.powerFrom ?? "") ? `${short(r.power)} Might` : short(r.power);
+}
+/**
+ * The squad setups of the player (Squad Roster of the vault): one field per kind of fight, one line per
+ * lineup. A player has four squad slots but fields other lineups against players, bosses and events.
+ */
+export function rosterEmbed(p) {
+    const rows = p.intel?.roster ?? [];
+    if (!rows.length)
+        return undefined;
+    const fields = [];
+    for (const r of rows) {
+        const heroes = r.heroes ? r.heroes.replace(/(\d)\*/g, "$1★") : "heroes not seen";
+        const tail = [r.bonus ? `${r.bonus} bonus` : "", r.seen ?? ""].filter(Boolean).join(" · ");
+        const line = `${r.setup}: **${rosterValue(r)}** ${heroes}${tail ? ` · ${tail}` : ""}`;
+        const last = fields[fields.length - 1];
+        const sameGroup = last?.name.replace(/ \(more\)$/, "") === r.group;
+        if (last && sameGroup && last.value.length + line.length < 1000)
+            last.value += `\n${line}`;
+        else if (fields.length < 25)
+            fields.push({ name: sameGroup ? `${r.group} (more)` : r.group, value: cut(line, 1024), inline: false });
+    }
+    return {
+        color: p.member ? COLORS.ours : COLORS.theirs,
+        title: "Squad setups",
+        description: "The lineups kept per kind of fight. PvP calculated: never seen together, built from the heroes known.",
+        fields,
+    };
+}
 /** All embeds of a card, within Discord's limits (10 embeds, 6000 characters in one message). */
 export function cardEmbeds(answer) {
     const p = answer.player;
     if (!p)
         return [];
     const list = [profileEmbed(p, answer.matches)];
+    const roster = rosterEmbed(p);
+    if (roster)
+        list.push(roster);
     const shot = screenshotEmbed(p);
     if (shot)
         list.push(shot);
