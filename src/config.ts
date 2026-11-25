@@ -21,6 +21,8 @@ export interface Config {
   readonly siegeChannelId?: string;
   /** Where R4 and R5 post screen recordings of rankings; without it Carlos reads no videos. */
   readonly videoChannelId?: string;
+  /** The forum channel where Carlos keeps the guide posts up to date; without it there is no guide. */
+  readonly guideForumId?: string;
 }
 
 export type SheetKey = "coachman" | "events" | "kvk" | "stats" | "members" | "siege";
@@ -57,6 +59,7 @@ const schema = z.object({
   SIEGE_URL: execLink.optional(),
   SIEGE_CHANNEL_ID: snowflake.optional(),
   VIDEO_CHANNEL_ID: snowflake.optional(),
+  GUIDE_FORUM_ID: snowflake.optional(),
 });
 
 export function readConfig(env: Readonly<Record<string, string | undefined>>): Config {
@@ -86,5 +89,6 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): C
     sheets: { ...sheets, members: e.MEMBERS_URL },
     ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
     ...(e.VIDEO_CHANNEL_ID ? { videoChannelId: e.VIDEO_CHANNEL_ID } : {}),
+    ...(e.GUIDE_FORUM_ID ? { guideForumId: e.GUIDE_FORUM_ID } : {}),
   };
 }

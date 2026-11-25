@@ -47,6 +47,7 @@ import {
   type AllianceAnswer,
   type PlayerAnswer,
 } from "../tracker/tracker.js";
+import { syncGuide, type GuideDeps } from "./guide-forum.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost, type VideoDeps } from "./video-inbox.js";
 
 export interface Wiring {
@@ -64,6 +65,8 @@ export interface Wiring {
   readonly siege?: SiegeDeps;
   /** The video inbox: ranking recordings of R4 and R5; only with VIDEO_CHANNEL_ID. */
   readonly video?: VideoDeps;
+  /** The guide forum: posts explaining Carlos, edited when they change; only with GUIDE_FORUM_ID. */
+  readonly guide?: GuideDeps;
   readonly log: (line: string) => void;
 }
 
@@ -84,6 +87,7 @@ export async function connect(w: Wiring): Promise<Client> {
     void w.memberList.fresh().catch((e: unknown) => w.log(`Member list not loaded: ${String(e)}`));
     // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
     if (w.siege?.channelId) startSiegeBoard(ready, w.siege);
+    if (w.guide) void syncGuide(ready, w.guide).catch((e: unknown) => w.log(`Guide forum not updated: ${String(e)}`));
     if (w.video) void catchUpVideos(ready, w.video).catch((e: unknown) => w.log(`Video inbox catch-up failed: ${String(e)}`));
   });
 

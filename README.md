@@ -34,6 +34,11 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
 - **/schedule**, **/today**, **/rules**, **/driverguide**, **/events**, **/ad** `[tomorrow]`, **/elixir**,
   **/kvk**: the texts the sheets' menus export. In-game texts come in code blocks so they copy cleanly.
   Members never see a draft schedule.
+- **The guide forum** (`GUIDE_FORUM_ID`): one forum post per topic that explains Carlos to members: how to
+  send screenshots, which screens Carlos can read (each with example pictures from `guide/`), the cards, farms,
+  texts and the Undead Siege. The texts live in `src/guide/guide.ts` and reuse the /help texts. On every start
+  Carlos compares each post with what it posted last time and edits only the ones that changed, so a new
+  version updates the forum by itself. "Start here" is pinned on top. Officer features are left out.
 
 **For R4 and R5**, everything is under **/lead**: `post` (a member text in the channel for everyone; posting
 the schedule locks it in, like its first export), `link` (set which member a Discord account is), `driver`,
@@ -66,7 +71,9 @@ only fetches it.
 1. **Discord developer portal**: create the application *Carlos*. Under *Bot*, switch on **Message Content
    Intent**, because Carlos has to see the attachments. Invite it with the scopes `bot` and
    `applications.commands` and the permissions *View Channel*, *Send Messages*, *Read Message History* and
-   *Add Reactions*.
+   *Add Reactions*. For the guide forum also *Create Posts* and *Manage Threads* in that forum (to pin
+   "Start here" and reopen archived posts). Forum tags named *Start here*, *Screenshots*, *Commands* and
+   *Events* are applied when the forum has them.
 2. **Upload web app**: add the script property `BOT_SECRET` (24 characters or more, random), push and
    update the existing deployment (`upload/MAINTENANCE.md`).
 3. **Settings**: copy `env.example` to `.env` locally, or set the same variables in the Wispbyte panel.

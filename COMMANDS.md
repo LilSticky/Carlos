@@ -20,6 +20,8 @@ with everything else.
   no option as required, so that `help` works on its own; a command run without what it needs (`/iam` without a
   name, `/whisper` without a picture) shows its help too. `/help` lists all commands; officers also see the `/lead`
   part. The texts are in `src/discord/help.ts`.
+- **The guide forum explains it.** Every member command and screenshot kind is described in a post of the
+  guide forum (`src/guide/guide.ts`); change it together with the command.
 - **Member numbers stay private.** AD scores and donations are shown to the member themselves (`/me`) and to
   officers (`/lead stats`), never to other members.
 - **The logic stays in the sheets** (`AGENTS.md`): every command calls an existing sheet action.

@@ -51,7 +51,7 @@ jobs:
             (cd out && git checkout --orphan deploy-new)
           fi
           find out -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -r dist package-lock.json out/
+          cp -r dist guide package-lock.json out/
           # Runtime dependencies only. The host's npm install fetches sharp's prebuilt Linux binary.
           node -e '
             const fs = require("node:fs");
