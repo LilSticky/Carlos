@@ -31,6 +31,8 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
   reports. No AD scores, donations or other member numbers.
 - **/farms**: players without an alliance tag with lots of resources, from scout reports. Pick the one you
   attack: it goes on cooldown under your name. Not there any more? **Gone? Retrace** asks the tracker where it went.
+- **/rotation**: this week's coachman schedule, for everyone in the channel (a draft stays hidden from
+  members). Not /schedule, because Discord's own /schedule hides an app's command of that name.
 - **/faq** `topic`: the driver guide or the house rules, only to the asker. The alliance messages (schedule,
   daily message, events, AD notice, Elixir teams, KvK roster) are for R4 and R5: **/lead text** and **/lead post**.
 - **The guide forum** (`GUIDE_FORUM_ID`): one forum post per topic that explains Carlos to members: how to

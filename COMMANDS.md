@@ -38,6 +38,7 @@ with everything else.
 | `/player name` | A player's combat card: squads, strength, intel from reports (members and other alliances) | Statistics `card`, `people` for autocomplete |
 | `/whois name\|uid [kingdom]` | Any player of the game from the Last Asylum Tracker: Might, alliance and rank, location; a pick list when several share the name | Members `trackerPlayer` |
 | `/alliance search [kingdom]` | An alliance by tag or full name (our Kingdom by default) with its members by rank; a menu shows a member's card privately | Members `trackerAlliance` |
+| `/rotation` | This week's coachman schedule, for everyone in the channel; while it is a draft, only that it is still being planned. Not `/schedule`: Discord's own command of that name hides an app's. | Coachman `schedule` |
 | `/faq topic` | A reference text to read, only to the asker: the driver guide or the house rules | Coachman `guide`, `rules` |
 | `/help [command]` | These commands in plain words; officers also see the `/lead` part. With a command: how it works, with examples (the same as that command's `help: True`) | none |
 
@@ -47,7 +48,7 @@ recordings in the video inbox (`VIDEO_CHANNEL_ID`): Carlos sends them to the Upl
 
 ## Leadership: `/lead`
 
-Every command that makes a message to post (schedule, daily message, events, AD notice, Elixir teams, KvK roster) is
+Every command that makes a message to post (schedule (members read it with `/rotation`), daily message, events, AD notice, Elixir teams, KvK roster) is
 here, not with the member commands.
 
 | Subcommand | Does | Sheet action |

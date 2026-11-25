@@ -37,7 +37,8 @@ describe("guide posts", () => {
       for (const e of memberHelp(ctx.sheets).filter((e) => e.name !== "help")) expect(t, `/${e.name}`).toContain(`**/${e.name}**`);
       expect(t).toContain("**/help**");
     }
-    expect(text(few)).not.toContain("**/schedule**");
+    expect(text(few)).not.toContain("**/rotation**");
+    expect(text(all)).toContain("**/rotation**");
     expect(text(few)).not.toContain("Undead Siege");
     expect(text(few)).not.toContain("KvK: say if");
     expect(text(all)).toContain("**Stay out**");

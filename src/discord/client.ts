@@ -211,6 +211,8 @@ async function command(interaction: ChatInputCommandInteraction, w: Wiring): Pro
     await alliance(interaction, w);
   } else if (name === "lead") {
     await lead(interaction, w);
+  } else if (name === "rotation") {
+    await showText(interaction, "schedule", false, officerCheck(interaction, w), w, false);
   } else if (name === "faq") {
     const text = faqText(interaction.options.getString("topic"));
     if (text) await showText(interaction, text, false, officerCheck(interaction, w), w, false);

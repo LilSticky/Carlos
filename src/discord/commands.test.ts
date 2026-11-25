@@ -40,16 +40,21 @@ describe("buildCommands", () => {
   it("lets /help pick a member command of the linked sheets, never /lead", () => {
     const help = buildCommands({ coachman: url, events: url }).find((c) => c.name === "help");
     const command = help?.options?.[0];
-    expect(command && "choices" in command ? command.choices?.map((c) => c.value) : undefined).toEqual(["iam", "whisper", "overlay", "faq"]);
+    expect(command && "choices" in command ? command.choices?.map((c) => c.value) : undefined).toEqual(["iam", "whisper", "overlay", "rotation", "faq"]);
   });
 
-  it("offers members no message texts, only /faq with Coachman Express, and /lead last", () => {
-    expect(buildCommands(all).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "player", "whois", "alliance", "faq", "help", "lead"]);
+  it("offers members only /rotation and /faq with Coachman Express, and /lead last", () => {
+    expect(buildCommands(all).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "farms", "player", "whois", "alliance", "rotation", "faq", "help", "lead"]);
     expect(buildCommands({ events: url }).map((c) => c.name)).toEqual(["iam", "whisper", "overlay", "help", "lead"]);
     const faq = buildCommands(all).find((c) => c.name === "faq");
     const topic = faq?.options?.[0];
     expect(topic && "choices" in topic ? topic.choices?.map((c) => c.value) : undefined).toEqual(["rules", "driverguide"]);
     expect(faq?.default_member_permissions ?? null).toBeNull();
+  });
+
+  it("never names a command /schedule, which Discord's own command hides", () => {
+    expect(buildCommands(all).map((c) => c.name)).not.toContain("schedule");
+    expect(buildCommands({ coachman: url }).map((c) => c.name)).toContain("rotation");
   });
 
   it("puts /player with Alliance Statistics, where the cards come from", () => {

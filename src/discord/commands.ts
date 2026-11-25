@@ -97,6 +97,17 @@ export const farmsCommand = withHelp(
     .setDMPermission(false),
 );
 
+/**
+ * /rotation: this week's coachman schedule, for everyone in the channel. Not /schedule: Discord has its own command
+ * of that name, which hides an app's /schedule.
+ */
+export const rotationCommand = withHelp(
+  new SlashCommandBuilder()
+    .setName("rotation")
+    .setDescription("This week's coachman schedule: who drives and who guards on each day")
+    .setDMPermission(false),
+);
+
 /** /faq: the reference texts of the linked sheets (how to drive, house rules), one to pick. */
 function faqCommand(sheets: Sheets): CommandBuilder | undefined {
   const topics = FAQ_TEXTS.filter((k) => sheets[TEXTS[k].sheet]);
@@ -241,6 +252,7 @@ export function buildCommands(sheets: Sheets): RESTPostAPIChatInputApplicationCo
   if (sheets.members) list.push(farmsCommand);
   if (sheets.stats) list.push(playerCommand);
   if (sheets.members) list.push(whoisCommand, allianceCommand);
+  if (sheets.coachman) list.push(rotationCommand);
   const faq = faqCommand(sheets);
   if (faq) list.push(faq);
   list.push(helpCommand(sheets), leadCommand(sheets));
