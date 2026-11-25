@@ -151,9 +151,9 @@ export const LEAD_HELP: readonly HelpEntry[] = [
   },
   {
     name: "lead post",
-    summary: "Post an alliance message in this channel for everyone",
+    summary: "Post an alliance message in the announcement channel for everyone",
     details:
-      `Posts one of the alliance messages in this channel, for everyone to read: ${POSTABLE}. ` +
+      `Posts one of the alliance messages in the announcement channel with @here, wherever you type it: ${POSTABLE}. ` +
       "Posting the weekly schedule locks it in.",
     examples: [
       ["/lead post what: Weekly schedule", "Posts the schedule and locks it in."],
@@ -188,7 +188,7 @@ export const LEAD_HELP: readonly HelpEntry[] = [
     summary: "Make the Undead Siege defense plan now",
     details:
       "Makes the Undead Siege defense plan from who pressed **Participate** and posts it in this channel. Carlos also " +
-      "posts the invitation and the plan by itself in the siege channel; use this when you need the plan earlier.",
+      "posts the invitation and the plan by itself in the announcement channel; use this when you need the plan earlier.",
     examples: [["/lead siege", "The plan, posted here."]],
   },
   {

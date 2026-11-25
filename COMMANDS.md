@@ -53,13 +53,13 @@ here, not with the member commands.
 | Subcommand | Does | Sheet action |
 |---|---|---|
 | `/lead text what` | An alliance message only to the officer, in a code block to copy into the game. `what`: schedule, today, rules, driverguide, events, ad today, ad tomorrow, elixir, kvk | Coachman `schedule`, `daily`, `rules`, `guide`; Events `week`, `ad` (offset 0 or 1), `elixir`; KvK `roster` |
-| `/lead post what` | Posts the same messages in this channel for everyone. Posting the schedule locks it in. | as above |
+| `/lead post what` | Posts the same messages in the announcement channel (`ANNOUNCE_CHANNEL_ID`) with @here. Posting the schedule locks it in. | as above |
 | `/lead link user name` | Sets which member a Discord account is | upload `members` |
 | `/lead driver` | The driver reminder to send on | Coachman `driver` |
 | `/lead notice` | The nominee notice | Coachman `notice` |
 | `/lead vote which` | The vote list: `nominees` or `guards` | Statistics `votes`, `guards` |
 | `/lead stats name` | All numbers of one member | Statistics `stats` |
-| `/lead siege` | Makes the Undead Siege defense plan now and posts it in this channel (Carlos also posts the invitation and the plan by itself in `SIEGE_CHANNEL_ID`) | Undead Siege `next`, `plan` |
+| `/lead siege` | Makes the Undead Siege defense plan now and posts it in this channel (Carlos also posts the invitation and the plan by itself in `ANNOUNCE_CHANNEL_ID`) | Undead Siege `next`, `plan` |
 | `/lead auto …` | *Later:* switch the daily caravan post and the driver DMs on or off and pick the channel | new |
 
 ## Build slices

@@ -17,8 +17,11 @@ export interface Config {
   readonly dataDir: string;
   /** The /exec links of the sheets whose Bot.js Carlos may ask; a sheet without a link has no commands. */
   readonly sheets: Readonly<Partial<Record<SheetKey, string>> & { members: string }>;
-  /** Where Carlos posts the Undead Siege invitation and plan; without it (or SIEGE_URL) nothing is posted by itself. */
-  readonly siegeChannelId?: string;
+  /**
+   * The announcement channel: invitation cards (Undead Siege, KvK vote), event announcements from /lead post and
+   * the follow-ups (siege plan, KvK Readiness card). Invitations and announcements tag @here there.
+   */
+  readonly announceChannelId: string;
   /** Where R4 and R5 post screen recordings of rankings; without it Carlos reads no videos. */
   readonly videoChannelId?: string;
   /** The forum channel where Carlos keeps the guide posts up to date; without it there is no guide. */
@@ -57,7 +60,8 @@ const schema = z.object({
   STATS_URL: execLink.optional(),
   MEMBERS_URL: execLink,
   SIEGE_URL: execLink.optional(),
-  SIEGE_CHANNEL_ID: snowflake.optional(),
+  // the alliance's announcement channel; SIEGE_CHANNEL_ID (the old siege channel) is no longer read
+  ANNOUNCE_CHANNEL_ID: snowflake.default("1575230778902716446"),
   VIDEO_CHANNEL_ID: snowflake.optional(),
   GUIDE_FORUM_ID: snowflake.optional(),
 });
@@ -87,7 +91,7 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): C
     sheetSecret: e.SHEET_SECRET,
     dataDir: e.DATA_DIR,
     sheets: { ...sheets, members: e.MEMBERS_URL },
-    ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
+    announceChannelId: e.ANNOUNCE_CHANNEL_ID,
     ...(e.VIDEO_CHANNEL_ID ? { videoChannelId: e.VIDEO_CHANNEL_ID } : {}),
     ...(e.GUIDE_FORUM_ID ? { guideForumId: e.GUIDE_FORUM_ID } : {}),
   };

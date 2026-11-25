@@ -16,8 +16,8 @@ type Sheets = Readonly<Partial<Record<SheetKey, string>>>;
 export interface GuideContext {
   readonly sheets: Sheets;
   readonly uploadChannelId: string;
-  /** Where the Undead Siege invitation goes; without it the siege post is left out. */
-  readonly siegeChannelId?: string;
+  /** The announcement channel: invitation cards and votes. */
+  readonly announceChannelId: string;
 }
 
 /** One message of a post: Markdown text and, below it, the example pictures named like `guide/<image>.png`. */
@@ -70,8 +70,8 @@ export const SCREENSHOT_GROUPS: readonly { key: string; title: string; kinds: re
       {
         key: "battle",
         name: "Battle report against a player",
-        how: "Open the report in your Mail and send **all 4 tabs** in one post.",
-        tabs: ["Overview", "Hero", "Lineup", "Battle Statistics"],
+        how: "Open the report in your Mail and send **all 3 tabs** in one post.",
+        tabs: ["Hero", "Lineup", "Battle Statistics"],
       },
       { key: "pve", name: "Battle report against a monster", how: "Same as above, for a Blight or another monster." },
       { key: "scout", name: "Scout report", how: "The report with the scouted player's squads." },
@@ -167,7 +167,25 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
     commandPost("faq", "FAQ: how to drive the coachman, house rules", "Only you see the answer.", pick("faq"), ["Commands"]),
   );
 
-  if (ctx.sheets.siege && ctx.siegeChannelId) {
+  if (ctx.sheets.kvk) {
+    posts.push({
+      key: "kvk-vote",
+      title: "KvK: say if you make it to the battle",
+      tags: ["Events"],
+      parts: [
+        {
+          text:
+            "# KvK: say if you make it to the battle\n" +
+            `- Before each Royal City battle on Day VI Carlos posts a vote in <#${ctx.announceChannelId}>. Press **Participate** or **Stay out**.\n` +
+            "- You can change your answer until Day VI starts. Your answer here counts over the in-game vote, but please vote in game too: it shows your Might.\n" +
+            "- When Day VI starts the vote closes and Carlos posts the KvK Readiness card: who comes and how strong we are.\n\n" +
+            FOOTER,
+        },
+      ],
+    });
+  }
+
+  if (ctx.sheets.siege) {
     posts.push({
       key: "siege",
       title: "Undead Siege: sign up with one button",
@@ -176,7 +194,7 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
         {
           text:
             "# Undead Siege: sign up with one button\n" +
-            `- Before each siege Carlos posts an invitation in <#${ctx.siegeChannelId}>. Press **Participate**.\n` +
+            `- Before each siege Carlos posts an invitation in <#${ctx.announceChannelId}>. Press **Participate**, or **Stay out** if your plans change.\n` +
             "- Shortly before the start Carlos posts the defense plan there. If you are mentioned, send your squads.\n\n" +
             FOOTER,
         },

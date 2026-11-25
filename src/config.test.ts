@@ -20,7 +20,13 @@ describe("readConfig", () => {
       sheetSecret: "a-secret-that-is-long-enough",
       dataDir: "data",
       sheets: { members: "https://script.google.com/macros/s/AKfy-abc_123/exec" },
+      announceChannelId: "1575230778902716446",
     });
+  });
+
+  it("posts announcements in the announcement channel, not in the old siege channel", () => {
+    expect(readConfig({ ...good, SIEGE_CHANNEL_ID: "523456789012345678" }).announceChannelId).toBe("1575230778902716446");
+    expect(readConfig({ ...good, ANNOUNCE_CHANNEL_ID: "623456789012345678" }).announceChannelId).toBe("623456789012345678");
   });
 
   it("keeps the links of the sheets that have one", () => {

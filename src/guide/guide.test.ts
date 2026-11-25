@@ -12,9 +12,9 @@ const url = "https://script.google.com/macros/s/x/exec";
 const all: GuideContext = {
   sheets: { coachman: url, events: url, kvk: url, stats: url, members: url, siege: url },
   uploadChannelId: "111111111111111111",
-  siegeChannelId: "222222222222222222",
+  announceChannelId: "222222222222222222",
 };
-const few: GuideContext = { sheets: { members: url }, uploadChannelId: "111111111111111111" };
+const few: GuideContext = { sheets: { members: url }, uploadChannelId: "111111111111111111", announceChannelId: "222222222222222222" };
 const text = (ctx: GuideContext) => guidePosts(ctx).flatMap((p) => p.parts.map((x) => x.text)).join("\n");
 
 describe("guide posts", () => {
@@ -39,6 +39,8 @@ describe("guide posts", () => {
     }
     expect(text(few)).not.toContain("**/schedule**");
     expect(text(few)).not.toContain("Undead Siege");
+    expect(text(few)).not.toContain("KvK: say if");
+    expect(text(all)).toContain("**Stay out**");
   });
 
   it("show every screenshot kind with a place for its example pictures", () => {

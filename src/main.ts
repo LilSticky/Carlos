@@ -11,6 +11,7 @@ import { GuideStore } from "./storage/guide-store.js";
 import { guidePosts } from "./guide/guide.js";
 import { loadPictures } from "./guide/pictures.js";
 import { SiegeStore } from "./storage/siege-store.js";
+import { KvkStore } from "./storage/kvk-store.js";
 import { VideoStore } from "./storage/video-store.js";
 import type { RecordingKind } from "./sheet/sheet.js";
 import { MAX_VIDEO_BYTES } from "./recordings/recording.js";
@@ -89,9 +90,21 @@ const client = await connect({
         siege: {
           callSheet,
           store: new SiegeStore(db),
-          channelId: config.siegeChannelId ?? "",
+          channelId: config.announceChannelId,
           memberOf: (id: string) => links.memberOf(id),
           discordOf: (member: string) => links.holderOf(member, ""),
+          now: () => new Date(),
+          log,
+        },
+      }
+    : {}),
+  ...(config.sheets.kvk
+    ? {
+        kvk: {
+          callSheet,
+          store: new KvkStore(db),
+          channelId: config.announceChannelId,
+          memberOf: (id: string) => links.memberOf(id),
           now: () => new Date(),
           log,
         },
@@ -104,7 +117,7 @@ const client = await connect({
           posts: guidePosts({
             sheets: config.sheets,
             uploadChannelId: config.uploadChannelId,
-            ...(config.siegeChannelId ? { siegeChannelId: config.siegeChannelId } : {}),
+            announceChannelId: config.announceChannelId,
           }),
           pictures: loadPictures("guide"),
           store: new GuideStore(db),

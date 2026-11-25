@@ -56,10 +56,15 @@ Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to i
   the farms;
 - `Bot.js` with its `BotActions.js` in Coachman Express, Event Calendar, KvK Planning and Alliance
   Statistics (`COACHMAN_URL`, `EVENTS_URL`, `KVK_URL`, `STATS_URL`) for search and exports. A sheet without a link has no commands.
-- `Bot.js` in the Undead Siege sheet (`SIEGE_URL`): with `SIEGE_CHANNEL_ID` set, Carlos posts the invitation
-  with its Participate button before each siege of the Event Calendar, signs up whoever presses it (their `/iam`
-  name) and posts the defense plan before the start, mentioning the members who send squads. `/lead siege` makes
-  and posts the plan at any time.
+- `Bot.js` in the Undead Siege sheet (`SIEGE_URL`): Carlos posts the invitation with its Participate and Stay
+  out buttons before each siege of the Event Calendar, signs up (or off) whoever presses them (their `/iam` name)
+  and posts the defense plan before the start, mentioning the members who send squads. `/lead siege` makes and
+  posts the plan at any time.
+- KvK Planning (`KVK_URL`, actions `kvkNext`, `kvkAnswer`, `kvkReadiness`): before each Day VI battle Carlos posts
+  the KvK vote card with Participate and Stay out. Answers go into the sheet's Discord Votes tab and win over the
+  imported in-game vote. When Day VI starts the card closes and Carlos posts the KvK Readiness card.
+- All invitation cards, votes and `/lead post` announcements go to the announcement channel (`ANNOUNCE_CHANNEL_ID`)
+  with `@here`. Carlos needs the permission *Mention @everyone, @here and All Roles* there.
 
 Each web app answers `{ ok, ... }` and only to a request that carries its `BOT_SECRET` script property. That
 is the same text in every sheet, and Carlos's `SHEET_SECRET`. The sheets build every text themselves; Carlos
