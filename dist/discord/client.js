@@ -21,6 +21,7 @@ import { announce, HERE } from "./announce.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
 import { allianceEmbed, allianceNotFoundText, ambiguousText, matchOptions, playerArgs, playerEmbed, playerNotFoundText, readAllianceAnswer, readPlayerAnswer, rosterOptions, } from "../tracker/tracker.js";
 import { syncGuide } from "./guide-forum.js";
+import { startScoresBoard } from "./scores-board.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost } from "./video-inbox.js";
 const NO_PINGS = { parse: [] };
 /**
@@ -44,6 +45,8 @@ export async function connect(w) {
             startDailyBoard(ready, w.daily);
         if (w.guide)
             void syncGuide(ready, w.guide).catch((e) => w.log(`Guide forum not updated: ${String(e)}`));
+        if (w.scores)
+            startScoresBoard(ready, w.scores);
         if (w.video)
             void catchUpVideos(ready, w.video).catch((e) => w.log(`Video inbox catch-up failed: ${String(e)}`));
     });

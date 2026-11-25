@@ -1,0 +1,73 @@
+import { createHash } from "node:crypto";
+import { ChannelType } from "discord.js";
+import { readScores, scoreEmbeds, stampEmbeds } from "../scores/scores.js";
+const KEY = "scores";
+const TITLE = "Intel Scoreboard";
+const TICK_MS = 15 * 60_000;
+const NO_PINGS = { parse: [] };
+async function findThread(client, id) {
+    try {
+        const ch = await client.channels.fetch(id);
+        return ch?.isThread() ? ch : null;
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Keeps one post in the guide forum with the intel scoreboards: asks Alliance Members every quarter hour and edits
+ * the post when the points changed. Makes the post when it is missing (first start, or deleted by hand).
+ * Returns a stop function.
+ */
+export function startScoresBoard(client, d) {
+    let lastError = "";
+    let busy = false;
+    const tick = async () => {
+        if (busy)
+            return;
+        busy = true;
+        try {
+            const data = readScores(await d.callSheet("members", "scores", {}));
+            if (!data)
+                throw new Error("the sheet sent an answer Carlos cannot read");
+            lastError = "";
+            const embeds = scoreEmbeds(data, d.uploadChannelId);
+            const hash = createHash("sha256").update(JSON.stringify(embeds)).digest("hex");
+            const saved = d.store.get(KEY);
+            const thread = saved ? await findThread(client, saved.threadId) : null;
+            const message = thread && saved ? await thread.messages.fetch(saved.messageId).catch(() => null) : null;
+            if (saved && message && saved.hash === hash)
+                return;
+            const body = { embeds: stampEmbeds(embeds, d.now()), allowedMentions: NO_PINGS };
+            if (thread && message) {
+                if (thread.archived)
+                    await thread.setArchived(false);
+                await message.edit(body);
+                d.store.save(KEY, { threadId: thread.id, messageId: message.id, hash });
+                d.log("Scoreboard post: updated.");
+                return;
+            }
+            const forum = await client.channels.fetch(d.forumId);
+            if (forum?.type !== ChannelType.GuildForum)
+                throw new Error(`channel ${d.forumId} is not a forum channel`);
+            const tags = forum.availableTags.filter((t) => ["scoreboard", "intel"].includes(t.name.toLowerCase())).map((t) => t.id);
+            const created = await forum.threads.create({ name: TITLE, message: body, appliedTags: tags.slice(0, 5) });
+            d.store.save(KEY, { threadId: created.id, messageId: created.id, hash }); // the starter message has the thread's ID
+            d.log("Scoreboard post: posted.");
+        }
+        catch (e) {
+            // the same problem is logged once, not every quarter hour
+            const text = e instanceof Error ? e.message : String(e);
+            if (text !== lastError)
+                d.log(`Scoreboard post: ${text}`);
+            lastError = text;
+        }
+        finally {
+            busy = false;
+        }
+    };
+    void tick();
+    const timer = setInterval(() => void tick(), TICK_MS);
+    return () => clearInterval(timer);
+}
+//# sourceMappingURL=scores-board.js.map

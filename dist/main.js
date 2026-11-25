@@ -7,6 +7,7 @@ import { isOfficer } from "./members/officers.js";
 import { callWebApp, createSheet, SheetError } from "./sheet/sheet.js";
 import { LinkStore, openDatabase } from "./storage/link-store.js";
 import { GuideStore } from "./storage/guide-store.js";
+import { BoardStore } from "./storage/board-store.js";
 import { guidePosts } from "./guide/guide.js";
 import { loadPictures } from "./guide/pictures.js";
 import { SiegeStore } from "./storage/siege-store.js";
@@ -129,6 +130,14 @@ const client = await connect({
                 }),
                 pictures: loadPictures("guide"),
                 store: new GuideStore(db),
+                log,
+            },
+            scores: {
+                callSheet,
+                store: new BoardStore(db),
+                forumId: config.guideForumId,
+                uploadChannelId: config.uploadChannelId,
+                now: () => new Date(),
                 log,
             },
         }
