@@ -102,7 +102,7 @@ export function guidePosts(ctx) {
             ],
         });
     }
-    posts.push(commandPost("cards", "Player and alliance cards", "Look up any player or alliance.", pick("player", "whois", "alliance"), ["Commands"]), commandPost("farms", "Farms: who to hit", "Carlos makes sure two of us never hit the same farm.", pick("farms"), ["Commands"]), commandPost("rotation", "Coachman schedule: who drives this week", "Everyone in the channel sees it.", pick("rotation"), ["Commands"]), commandPost("faq", "FAQ: how to drive the coachman, house rules", "Only you see the answer.", pick("faq"), ["Commands"]));
+    posts.push(commandPost("cards", "Player and alliance cards", "Look up any player or alliance.", pick("player", "whois", "alliance"), ["Commands"]), commandPost("farms", "Farms: who to hit", "Carlos makes sure two of us never hit the same farm.", pick("farms"), ["Commands"]), commandPost("rotation", "Coachman schedule: who drives this week", `Times show in your own time. Each day Carlos also posts the caravan message in <#${ctx.announceChannelId}>, three hours before set-up, and tags the driver.`, pick("rotation"), ["Commands"]), commandPost("faq", "FAQ: how to drive the coachman, house rules", "Only you see the answer.", pick("faq"), ["Commands"]));
     if (ctx.sheets.kvk) {
         posts.push({
             key: "kvk-vote",
