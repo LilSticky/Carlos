@@ -83,6 +83,14 @@ export const MEMBER_HELP = [
         ],
     },
     {
+        name: "rotation",
+        sheet: TEXTS.schedule.sheet,
+        summary: "This week's coachman schedule",
+        details: "Shows who drives the coachman and who guards on each day of the week. While the officers still plan the " +
+            "week, Carlos says so instead. Everyone in the channel sees the schedule.",
+        examples: [["/rotation", "The schedule, for everyone in the channel."]],
+    },
+    {
         name: "faq",
         sheet: TEXTS.driverguide.sheet,
         summary: "Look something up: how to drive the coachman, the house rules",

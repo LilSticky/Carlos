@@ -175,6 +175,9 @@ async function command(interaction, w) {
     else if (name === "lead") {
         await lead(interaction, w);
     }
+    else if (name === "rotation") {
+        await showText(interaction, "schedule", false, officerCheck(interaction, w), w, false);
+    }
     else if (name === "faq") {
         const text = faqText(interaction.options.getString("topic"));
         if (text)
