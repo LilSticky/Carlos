@@ -81,6 +81,27 @@ describe("cardEmbeds", () => {
     expect(p?.description).toContain("Nothing known yet");
   });
 
+  it("lists the squad setups per kind of fight, one line per lineup", () => {
+    const withRoster = structuredClone(memberAnswer) as typeof memberAnswer & { player: { intel: { roster: unknown[] } } };
+    withRoster.player.intel.roster = [
+      { group: "PvP seen", setup: "Pure Warrior 1", heroes: "Hero A 140 8*, Hero B 140 10*", bonus: "20%", power: 19600000, powerFrom: "Battle power", seen: "2026-11-24" },
+      { group: "PvP seen", setup: "Bait", heroes: "Hero D 50 2*", losses: 0, seen: "2026-11-21" },
+      { group: "PvP calculated", setup: "Mightiest 5", heroes: "Hero A 140 8*", bonus: "10%", power: 8626140, powerFrom: "Hero Might + 10%" },
+      { group: "Demon King", setup: "Warrior 1", damage: 1577535551, seen: "2026-11-25" },
+      { group: "Undead Siege", setup: "2026-11-24 squad 1", power: 12800000, losses: 2 },
+    ];
+    const embeds = cardEmbeds(readCard(withRoster)!);
+    const roster = embeds.find((e) => e.title === "Squad setups");
+    const f = Object.fromEntries((roster?.fields ?? []).map((x) => [x.name, x.value]));
+    expect(f["PvP seen"]).toBe(
+      "Pure Warrior 1: **19.6M** Hero A 140 8★, Hero B 140 10★ · 20% bonus · 2026-11-24\nBait: **0 lost** Hero D 50 2★ · 2026-11-21",
+    );
+    expect(f["PvP calculated"]).toBe("Mightiest 5: **8.6M Might** Hero A 140 8★ · 10% bonus");
+    expect(f["Demon King"]).toBe("Warrior 1: **1.6B damage** heroes not seen · 2026-11-25");
+    expect(f["Undead Siege"]).toBe("2026-11-24 squad 1: **12.8M** heroes not seen");
+    expect(embeds[1]).toBe(roster); // right after the profile
+  });
+
   it("stays within Discord's 6000 characters", () => {
     const big = structuredClone(memberAnswer);
     big.player.intel.squads = [1, 2, 3, 4].map((n) => ({ ...memberAnswer.player.intel.squads[0]!, n }));
