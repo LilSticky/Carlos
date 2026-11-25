@@ -53,6 +53,7 @@ import {
   type PlayerAnswer,
 } from "../tracker/tracker.js";
 import { syncGuide, type GuideDeps } from "./guide-forum.js";
+import { startScoresBoard, type ScoresDeps } from "./scores-board.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost, type VideoDeps } from "./video-inbox.js";
 
 export interface Wiring {
@@ -76,6 +77,8 @@ export interface Wiring {
   readonly video?: VideoDeps;
   /** The guide forum: posts explaining Carlos, edited when they change; only with GUIDE_FORUM_ID. */
   readonly guide?: GuideDeps;
+  /** The intel scoreboard post in the guide forum, kept up to date; only with GUIDE_FORUM_ID. */
+  readonly scores?: ScoresDeps;
   readonly log: (line: string) => void;
 }
 
@@ -99,6 +102,7 @@ export async function connect(w: Wiring): Promise<Client> {
     if (w.kvk?.channelId) startKvkBoard(ready, w.kvk);
     if (w.daily?.channelId) startDailyBoard(ready, w.daily);
     if (w.guide) void syncGuide(ready, w.guide).catch((e: unknown) => w.log(`Guide forum not updated: ${String(e)}`));
+    if (w.scores) startScoresBoard(ready, w.scores);
     if (w.video) void catchUpVideos(ready, w.video).catch((e: unknown) => w.log(`Video inbox catch-up failed: ${String(e)}`));
   });
 

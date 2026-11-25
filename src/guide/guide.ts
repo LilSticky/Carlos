@@ -133,6 +133,7 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
         `- Post up to **10 screenshots at once** in ${upload}. No text needed, no cropping.\n` +
         "- Carlos reads them for you, and the officers get the numbers.\n" +
         "- Something went wrong? Press **Retry** under Carlos's answer.\n" +
+        "- Every report earns **intel points**: see the **Intel Scoreboard** post.\n" +
         "- Which screens: see the **What to screenshot** posts.",
       pick("whisper", "overlay").map(commandLine).join("\n"),
       FOOTER,
