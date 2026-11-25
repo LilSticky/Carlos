@@ -39,6 +39,21 @@ export const playerCommand = withHelp(new SlashCommandBuilder()
     .setDescription("A player's combat card: Might, readiness, squads, heroes, gear and what reports showed")
     .setDMPermission(false)
     .addStringOption((o) => o.setName("name").setDescription("Name, or part of it: our members and players seen in reports").setAutocomplete(true).setMinLength(2).setMaxLength(60)));
+/** /whois: any player of the game from the Last Asylum Tracker, by uid or complete name. */
+export const whoisCommand = withHelp(new SlashCommandBuilder()
+    .setName("whois")
+    .setDescription("Any player of the game from the Last Asylum Tracker: Might, alliance, rank, where they sit")
+    .setDMPermission(false)
+    .addStringOption((o) => o.setName("name").setDescription("The player's complete in-game name").setMaxLength(32))
+    .addStringOption((o) => o.setName("uid").setDescription("The player's uid (the number on the profile)").setMaxLength(20))
+    .addIntegerOption((o) => o.setName("kingdom").setDescription("The player's Kingdom, to narrow a name down").setMinValue(1).setMaxValue(9999)));
+/** /alliance: an alliance and its roster from the Last Asylum Tracker, by tag or full name in one Kingdom. */
+export const allianceCommand = withHelp(new SlashCommandBuilder()
+    .setName("alliance")
+    .setDescription("An alliance and its members from the Last Asylum Tracker")
+    .setDMPermission(false)
+    .addStringOption((o) => o.setName("search").setDescription("The alliance tag, or its complete name").setMaxLength(40))
+    .addIntegerOption((o) => o.setName("kingdom").setDescription("The Kingdom (default: ours)").setMinValue(1).setMaxValue(9999)));
 export const farmsCommand = withHelp(new SlashCommandBuilder()
     .setName("farms")
     .setDescription("Players without an alliance tag with lots of resources: pick the one you attack")
@@ -124,6 +139,8 @@ function leadCommand(sheets) {
 const NEEDS = {
     iam: [["name"]],
     player: [["name"]],
+    whois: [["name", "uid"]],
+    alliance: [["search"]],
     whisper: [WHISPER_OPTIONS],
     "lead post": [["what"]],
     "lead link": [["user"], ["name"]],
@@ -157,6 +174,8 @@ export function buildCommands(sheets) {
         list.push(farmsCommand);
     if (sheets.stats)
         list.push(playerCommand);
+    if (sheets.members)
+        list.push(whoisCommand, allianceCommand);
     for (const t of TEXT_COMMANDS) {
         if (!sheets[TEXTS[t.text].sheet])
             continue;

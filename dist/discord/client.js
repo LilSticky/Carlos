@@ -14,6 +14,7 @@ import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText 
 import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
+import { allianceEmbed, allianceNotFoundText, ambiguousText, matchOptions, playerArgs, playerEmbed, playerNotFoundText, readAllianceAnswer, readPlayerAnswer, rosterOptions, } from "../tracker/tracker.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost } from "./video-inbox.js";
 const NO_PINGS = { parse: [] };
 /**
@@ -41,6 +42,9 @@ export async function connect(w) {
             void autocomplete(interaction, w);
         else if (interaction.isStringSelectMenu() && interaction.customId === CARD_MENU) {
             void pickCard(interaction, w).catch((e) => w.log(`Card menu failed: ${String(e)}`));
+        }
+        else if (interaction.isStringSelectMenu() && (interaction.customId === WHOIS_PICK || interaction.customId === WHOIS_ROSTER)) {
+            void pickWhois(interaction, w).catch((e) => w.log(`Whois menu failed: ${String(e)}`));
         }
         else if (interaction.isStringSelectMenu() && interaction.customId === FARM_MENU) {
             void pickFarm(interaction, w).catch((e) => w.log(`Farm menu failed: ${String(e)}`));
@@ -151,6 +155,12 @@ async function command(interaction, w) {
     else if (name === "player") {
         await player(interaction, w);
     }
+    else if (name === "whois") {
+        await whois(interaction, w);
+    }
+    else if (name === "alliance") {
+        await alliance(interaction, w);
+    }
     else if (name === "lead") {
         await lead(interaction, w);
     }
@@ -204,18 +214,18 @@ async function lead(interaction, w) {
 }
 const FARM_MENU = "farm";
 const RETRACE = "retrace:";
-/** Asks Alliance Members for one farm action; the answer, or the error text to show. */
-async function farmCall(action, args, read, w) {
+/** Asks Alliance Members for one action (farms, tracker lookups); the answer, or the error text to show. */
+async function membersCall(action, args, read, w) {
     try {
         const answer = read(await w.callSheet("members", action, args));
         if (answer)
             return answer;
-        w.log(`Farms ${action}: Alliance Members sent an answer Carlos cannot read.`);
+        w.log(`Alliance Members ${action}: sent an answer Carlos cannot read.`);
         return "The sheet sent an answer Carlos cannot read.";
     }
     catch (e) {
         if (e instanceof SheetError && e.setup)
-            w.log(`Farms ${action}: ${e.message}`);
+            w.log(`Alliance Members ${action}: ${e.message}`);
         return e instanceof SheetError ? e.message : "Something went wrong. Please try again.";
     }
 }
@@ -235,7 +245,7 @@ function retraceRow(key) {
 }
 /** /farms: the farms without an alliance tag, for everyone in the channel, with the menu to pick one. */
 async function farms(interaction, w) {
-    const list = await farmCall("farms", {}, readFarmList, w);
+    const list = await membersCall("farms", {}, readFarmList, w);
     if (typeof list === "string") {
         await fail(interaction, list);
         return;
@@ -253,8 +263,8 @@ async function pickFarm(interaction, w) {
         return;
     }
     await interaction.deferUpdate();
-    const farm = await farmCall("hit", { key: interaction.values[0] ?? "", by: member }, readHit, w);
-    const list = await farmCall("farms", {}, readFarmList, w);
+    const farm = await membersCall("hit", { key: interaction.values[0] ?? "", by: member }, readHit, w);
+    const list = await membersCall("farms", {}, readFarmList, w);
     if (typeof list !== "string")
         await interaction.editReply({ ...farmsMessage(list), allowedMentions: NO_PINGS });
     if (typeof farm === "string") {
@@ -273,7 +283,7 @@ async function pickFarm(interaction, w) {
 async function retrace(interaction, w) {
     await interaction.deferUpdate();
     const key = interaction.customId.slice(RETRACE.length);
-    const r = await farmCall("retrace", { key }, readRetrace, w);
+    const r = await membersCall("retrace", { key }, readRetrace, w);
     if (typeof r === "string") {
         await interaction.followUp({ content: r, flags: MessageFlags.Ephemeral });
         return;
@@ -348,6 +358,83 @@ async function pickCard(interaction, w) {
         return;
     }
     await interaction.editReply({ ...cardMessage(card, true), allowedMentions: NO_PINGS });
+}
+const WHOIS_PICK = "whois:pick";
+const WHOIS_ROSTER = "whois:roster";
+/** One select menu row. */
+function menuRow(id, placeholder, options) {
+    return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder).addOptions(options));
+}
+/** A player card, or the pick list when several share the name, or the text why there is none. */
+function whoisMessage(answer, args) {
+    if (answer.kind === "found")
+        return { embeds: [playerEmbed(answer.player)], components: [] };
+    if (answer.kind === "not-found" || !answer.matches.length)
+        return playerNotFoundText(args);
+    return {
+        content: ambiguousText(args.name ?? "", answer.matches),
+        embeds: [],
+        components: [menuRow(WHOIS_PICK, "Pick the player", matchOptions(answer.matches))],
+    };
+}
+/** /whois: a player from the tracker (through Alliance Members, which holds the key), for everyone in the channel. */
+async function whois(interaction, w) {
+    const args = playerArgs({
+        uid: interaction.options.getString("uid") ?? undefined,
+        name: interaction.options.getString("name") ?? undefined,
+        kingdom: interaction.options.getInteger("kingdom") ?? undefined,
+    });
+    if (!args) {
+        await fail(interaction, "Give the player's complete name or uid.");
+        return;
+    }
+    const answer = await membersCall("trackerPlayer", args, readPlayerAnswer, w);
+    const message = typeof answer === "string" ? answer : whoisMessage(answer, args);
+    if (typeof message === "string") {
+        await fail(interaction, message);
+        return;
+    }
+    await interaction.editReply({ ...message, allowedMentions: NO_PINGS });
+}
+/** /alliance: an alliance with its roster from the tracker, and a menu to look a member up. */
+async function alliance(interaction, w) {
+    const search = (interaction.options.getString("search") ?? "").trim();
+    const kingdom = interaction.options.getInteger("kingdom");
+    const answer = await membersCall("trackerAlliance", kingdom ? { search, kingdom: String(kingdom) } : { search }, readAllianceAnswer, w);
+    if (typeof answer === "string" || answer.kind === "not-found") {
+        await fail(interaction, typeof answer === "string" ? answer : allianceNotFoundText(search, answer.kingdom));
+        return;
+    }
+    const options = rosterOptions(answer.alliance);
+    const more = answer.alliance.roster.length > options.length ? ` (the first ${options.length})` : "";
+    await interaction.editReply({
+        embeds: [allianceEmbed(answer.alliance)],
+        components: options.length ? [menuRow(WHOIS_ROSTER, `Look up a member${more}`, options)] : [],
+        allowedMentions: NO_PINGS,
+    });
+}
+/**
+ * The menus of /whois and /alliance: the picked player's card. The asker of a /whois pick list gets it in place of
+ * the list; a member picked under an alliance card, or a pick by someone else, comes only to the one who picked.
+ */
+async function pickWhois(interaction, w) {
+    const own = interaction.customId === WHOIS_PICK &&
+        (interaction.message.interactionMetadata?.user.id === interaction.user.id || interaction.message.flags.has(MessageFlags.Ephemeral));
+    if (own)
+        await interaction.deferUpdate();
+    else
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const args = { uid: interaction.values[0] ?? "" };
+    const answer = await membersCall("trackerPlayer", args, readPlayerAnswer, w);
+    const message = typeof answer === "string" ? answer : whoisMessage(answer, args);
+    if (typeof message === "string") {
+        if (own)
+            await interaction.followUp({ content: message, flags: MessageFlags.Ephemeral });
+        else
+            await interaction.editReply(message);
+        return;
+    }
+    await interaction.editReply({ content: "", ...message, allowedMentions: NO_PINGS });
 }
 /** /lead stats: a member's full statistics as tables, seen only by the asker (lead() checked the rank). */
 async function stats(interaction, w) {
