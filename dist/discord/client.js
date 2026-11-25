@@ -15,6 +15,7 @@ import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON } from "../siege/siege.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
 import { allianceEmbed, allianceNotFoundText, ambiguousText, matchOptions, playerArgs, playerEmbed, playerNotFoundText, readAllianceAnswer, readPlayerAnswer, rosterOptions, } from "../tracker/tracker.js";
+import { syncGuide } from "./guide-forum.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost } from "./video-inbox.js";
 const NO_PINGS = { parse: [] };
 /**
@@ -32,6 +33,8 @@ export async function connect(w) {
         // the board posts by itself only when it knows where: SIEGE_CHANNEL_ID
         if (w.siege?.channelId)
             startSiegeBoard(ready, w.siege);
+        if (w.guide)
+            void syncGuide(ready, w.guide).catch((e) => w.log(`Guide forum not updated: ${String(e)}`));
         if (w.video)
             void catchUpVideos(ready, w.video).catch((e) => w.log(`Video inbox catch-up failed: ${String(e)}`));
     });

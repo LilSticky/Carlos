@@ -20,7 +20,7 @@ export const MEMBER_HELP = [
             "who you are with **/iam** first.",
         examples: [
             ["/whisper picture: (your screenshot)", "Sends one screenshot."],
-            ["/whisper picture: â€¦ picture2: â€¦ picture3: â€¦", "Sends several at once, up to picture10."],
+            ["/whisper picture: ... picture2: ... picture3: ...", "Sends several at once, up to picture10."],
         ],
     },
     {

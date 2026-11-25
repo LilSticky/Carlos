@@ -37,6 +37,7 @@ const schema = z.object({
     SIEGE_URL: execLink.optional(),
     SIEGE_CHANNEL_ID: snowflake.optional(),
     VIDEO_CHANNEL_ID: snowflake.optional(),
+    GUIDE_FORUM_ID: snowflake.optional(),
 });
 export function readConfig(env) {
     const blankless = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
@@ -64,6 +65,7 @@ export function readConfig(env) {
         sheets: { ...sheets, members: e.MEMBERS_URL },
         ...(e.SIEGE_CHANNEL_ID ? { siegeChannelId: e.SIEGE_CHANNEL_ID } : {}),
         ...(e.VIDEO_CHANNEL_ID ? { videoChannelId: e.VIDEO_CHANNEL_ID } : {}),
+        ...(e.GUIDE_FORUM_ID ? { guideForumId: e.GUIDE_FORUM_ID } : {}),
     };
 }
 //# sourceMappingURL=config.js.map

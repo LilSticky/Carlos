@@ -6,6 +6,9 @@ import { MemberList } from "./members/members.js";
 import { isOfficer } from "./members/officers.js";
 import { callWebApp, createSheet, SheetError } from "./sheet/sheet.js";
 import { LinkStore, openDatabase } from "./storage/link-store.js";
+import { GuideStore } from "./storage/guide-store.js";
+import { guidePosts } from "./guide/guide.js";
+import { loadPictures } from "./guide/pictures.js";
 import { SiegeStore } from "./storage/siege-store.js";
 import { VideoStore } from "./storage/video-store.js";
 import { MAX_VIDEO_BYTES } from "./recordings/recording.js";
@@ -85,6 +88,21 @@ const client = await connect({
                 memberOf: (id) => links.memberOf(id),
                 discordOf: (member) => links.holderOf(member, ""),
                 now: () => new Date(),
+                log,
+            },
+        }
+        : {}),
+    ...(config.guideForumId
+        ? {
+            guide: {
+                forumId: config.guideForumId,
+                posts: guidePosts({
+                    sheets: config.sheets,
+                    uploadChannelId: config.uploadChannelId,
+                    ...(config.siegeChannelId ? { siegeChannelId: config.siegeChannelId } : {}),
+                }),
+                pictures: loadPictures("guide"),
+                store: new GuideStore(db),
                 log,
             },
         }
