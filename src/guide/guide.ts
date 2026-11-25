@@ -49,6 +49,8 @@ export interface ScreenshotKind {
   readonly how: string;
   /** Screens with tabs: one message and one example picture (`<key>-1.png` ...) per tab, in this order. */
   readonly tabs?: readonly string[];
+  /** A short line after the tabs, with its own example picture (`<image>.png`). */
+  readonly note?: { readonly text: string; readonly image: string };
 }
 
 export const SCREENSHOT_GROUPS: readonly { key: string; title: string; kinds: readonly ScreenshotKind[] }[] = [
@@ -56,7 +58,7 @@ export const SCREENSHOT_GROUPS: readonly { key: string; title: string; kinds: re
     key: "shots-own",
     title: "What to screenshot: your own squads, heroes and soldiers",
     kinds: [
-      { key: "squads", name: "Squad overview", how: "All your squads on one screen, with their Squad Might." },
+      { key: "squads", name: "Squad overview", how: "Triangular Arena (every second week): the screen with all your squads and their Squad Might." },
       { key: "hero", name: "Hero page", how: "Open a hero. Send the tabs **Stats**, **Stars** and **Skill**." },
       { key: "roster", name: "Hero list", how: "Hero screen, tab **All**. Scroll and send each part." },
       { key: "barracks", name: "Barracks", how: "The Barracks window with your soldiers per tier." },
@@ -70,8 +72,12 @@ export const SCREENSHOT_GROUPS: readonly { key: string; title: string; kinds: re
       {
         key: "battle",
         name: "Battle report against a player",
-        how: "Open the report in your Mail and send **all 3 tabs** in one post.",
-        tabs: ["Hero", "Lineup", "Battle Statistics"],
+        how: "Open the report in your Mail and send **every tab** in one post.",
+        tabs: ["Overview", "Hero", "Lineup", "Battle Statistics"],
+        note: {
+          text: "Against a monster there is no Overview tab. No troops on the other side? Then there is no Lineup tab either.",
+          image: "raid",
+        },
       },
       { key: "pve", name: "Battle report against a monster", how: "Same as above, for a Blight or another monster." },
       { key: "scout", name: "Scout report", how: "The report with the scouted player's squads." },
@@ -150,6 +156,7 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
         ...g.kinds.flatMap((k): GuidePart[] => [
           { text: `## ${k.name}\n${k.how}`, ...(k.tabs ? {} : { image: k.key }) },
           ...(k.tabs ?? []).map((tab, t) => ({ text: `**Tab ${t + 1} of ${k.tabs!.length}: ${tab}**`, image: `${k.key}-${t + 1}` })),
+          ...(k.note ? [{ text: k.note.text, image: k.note.image }] : []),
         ]),
         { text: FOOTER },
       ],
