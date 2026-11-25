@@ -119,7 +119,7 @@ export const MEMBER_HELP: readonly HelpEntry[] = [
     summary: "This week's coachman schedule",
     details:
       "Shows who drives the coachman and who guards on each day of the week. While the officers still plan the " +
-      "week, Carlos says so instead. Everyone in the channel sees the schedule.",
+      "week, Carlos says so instead. Set-up times show in your own time. Everyone in the channel sees the schedule.",
     examples: [["/rotation", "The schedule, for everyone in the channel."]],
   },
   {

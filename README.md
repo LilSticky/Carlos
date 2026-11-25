@@ -31,7 +31,7 @@ The full command plan, with who sees what, is in `COMMANDS.md`.
   reports. No AD scores, donations or other member numbers.
 - **/farms**: players without an alliance tag with lots of resources, from scout reports. Pick the one you
   attack: it goes on cooldown under your name. Not there any more? **Gone? Retrace** asks the tracker where it went.
-- **/rotation**: this week's coachman schedule, for everyone in the channel (a draft stays hidden from
+- **/rotation**: this week's coachman schedule as a card, set-up times in each reader's own time, for everyone in the channel (a draft stays hidden from
   members). Not /schedule, because Discord's own /schedule hides an app's command of that name.
 - **/faq** `topic`: the driver guide or the house rules, only to the asker. The alliance messages (schedule,
   daily message, events, AD notice, Elixir teams, KvK roster) are for R4 and R5: **/lead text** and **/lead post**.
@@ -65,6 +65,9 @@ Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to i
 - KvK Planning (`KVK_URL`, actions `kvkNext`, `kvkAnswer`, `kvkReadiness`): before each Day VI battle Carlos posts
   the KvK vote card with Participate and Stay out. Answers go into the sheet's Discord Votes tab and win over the
   imported in-game vote. When Day VI starts the card closes and Carlos posts the KvK Readiness card.
+- Coachman Express (`COACHMAN_URL`, action `daily`): three hours before each day's set-up Carlos posts that day's
+  caravan message in the announcement channel, without `@here`, and mentions the driver when their account is
+  linked with /iam. Once a day; a restart does not post it again.
 - All invitation cards, votes and `/lead post` announcements go to the announcement channel (`ANNOUNCE_CHANNEL_ID`)
   with `@here`. Carlos needs the permission *Mention @everyone, @here and All Roles* there.
 

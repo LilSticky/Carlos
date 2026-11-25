@@ -42,6 +42,19 @@ describe("schedule card", () => {
     expect(e.fields?.[2]?.value).toBe("Coach: **Alpha** · backup Beta");
   });
 
+  it("shows the set-up times as Discord timestamps when the sheet sends them, the next stop also how soon", () => {
+    const at = (h: number) => Date.UTC(2026, 10, 26, h, 0);
+    const data = scheduleData.parse({
+      boarding: "Coachman set-up 17:30-18:00 server time, unless a day says otherwise",
+      days: [day(3, { fromAt: at(19) - 1_800_000, byAt: at(20) }), day(4, { fromAt: at(43) - 1_800_000, byAt: at(44), time: { text: "x", changed: true } })],
+    });
+    const e = scheduleEmbed(data);
+    const s = (ms: number) => Math.floor(ms / 1000);
+    expect(e.description).toContain("your own time");
+    expect(e.fields?.[0]?.value.split("\n")[0]).toBe(`Set-up **<t:${s(at(19) - 1_800_000)}:t>-<t:${s(at(20))}:t>** · <t:${s(at(19) - 1_800_000)}:R>`);
+    expect(e.fields?.[1]?.value.split("\n")[0]).toBe(`Set-up **<t:${s(at(43) - 1_800_000)}:t>-<t:${s(at(44))}:t>** (new time)`);
+  });
+
   it("reads no card from a sheet that sends only the text", () => {
     expect(scheduleData.safeParse({ text: "x" }).success).toBe(false);
   });

@@ -70,4 +70,5 @@ here, not with the member commands.
    top-level `/stats` are gone. `/player` shows the combat card (built alongside).
 2. **`/me`.** Your own AD scores, donations and duties. No sheet change: Coachman `search` exists.
 3. ✅ **`/help`** and the `help` option on every command. Texts in `src/discord/help.ts`.
-4. **`/lead auto`** with the scheduled posts (daily caravan message, driver reminder DM).
+4. **`/lead auto`** with the scheduled posts: the daily caravan message is ✅ automatic (three hours before set-up,
+   in the announcement channel, the driver mentioned); still to come: the driver reminder DM and a switch for both.

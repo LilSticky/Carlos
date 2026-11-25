@@ -164,7 +164,13 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
       pick("farms"),
       ["Commands"],
     ),
-    commandPost("rotation", "Coachman schedule: who drives this week", "Everyone in the channel sees it.", pick("rotation"), ["Commands"]),
+    commandPost(
+      "rotation",
+      "Coachman schedule: who drives this week",
+      `Times show in your own time. Each day Carlos also posts the caravan message in <#${ctx.announceChannelId}>, three hours before set-up, and tags the driver.`,
+      pick("rotation"),
+      ["Commands"],
+    ),
     commandPost("faq", "FAQ: how to drive the coachman, house rules", "Only you see the answer.", pick("faq"), ["Commands"]),
   );
 
