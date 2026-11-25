@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scheduleData } from "../cards/schedule.js";
 import { SheetError } from "../sheet/sheet.js";
 /**
  * Every text, keyed by its own key. Messages to post are for R4 and R5 only: /lead text shows one to copy into the
@@ -55,7 +56,9 @@ export async function runExport(def, request, call) {
     const draft = "text" in r && r.draft === true;
     if (draft && !(await request.isOfficer()))
         return { kind: "draft" };
-    return { kind: "shown", def, parts, post: request.post, draft, lockedNow: "text" in r && r.lockedNow === true };
+    const lockedNow = "text" in r && r.lockedNow === true;
+    const days = def.action === "schedule" ? scheduleData.safeParse(raw) : undefined;
+    return { kind: "shown", def, parts, post: request.post, draft, lockedNow, ...(days?.success ? { schedule: days.data } : {}) };
 }
 export const DISCORD_LIMIT = 2000;
 /**
