@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { SheetKey } from "../config.js";
+import { scheduleData, type ScheduleData } from "../cards/schedule.js";
 import { SheetError } from "../sheet/sheet.js";
 
 /**
@@ -69,6 +70,8 @@ export type ExportOutcome =
       readonly post: boolean;
       readonly draft: boolean;
       readonly lockedNow: boolean;
+      /** The days of the schedule, when the sheet sends them, for the /rotation card. */
+      readonly schedule?: ScheduleData;
     }
   | { readonly kind: "failed"; readonly error: string; readonly setup: boolean };
 
@@ -98,7 +101,9 @@ export async function runExport(
   const parts = "parts" in r ? r.parts.filter((p) => p.trim()) : [r.text];
   const draft = "text" in r && r.draft === true;
   if (draft && !(await request.isOfficer())) return { kind: "draft" };
-  return { kind: "shown", def, parts, post: request.post, draft, lockedNow: "text" in r && r.lockedNow === true };
+  const lockedNow = "text" in r && r.lockedNow === true;
+  const days = def.action === "schedule" ? scheduleData.safeParse(raw) : undefined;
+  return { kind: "shown", def, parts, post: request.post, draft, lockedNow, ...(days?.success ? { schedule: days.data } : {}) };
 }
 
 export const DISCORD_LIMIT = 2000;

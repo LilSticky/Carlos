@@ -18,6 +18,7 @@ import {
 } from "discord.js";
 import { cardEmbeds, readCard, sideLabel, type CardAnswer } from "../cards/card.js";
 import { suggestPeople, type PeopleList } from "../cards/people.js";
+import { scheduleEmbed } from "../cards/schedule.js";
 import { readStats, statsEmbeds } from "../cards/stats.js";
 import type { Config } from "../config.js";
 import { runExport, TEXTS, toMessages, type CallSheet, type TextKey } from "../exports/exports.js";
@@ -212,7 +213,7 @@ async function command(interaction: ChatInputCommandInteraction, w: Wiring): Pro
   } else if (name === "lead") {
     await lead(interaction, w);
   } else if (name === "rotation") {
-    await showText(interaction, "schedule", false, officerCheck(interaction, w), w, false);
+    await rotation(interaction, w);
   } else if (name === "faq") {
     const text = faqText(interaction.options.getString("topic"));
     if (text) await showText(interaction, text, false, officerCheck(interaction, w), w, false);
@@ -553,6 +554,32 @@ async function showText(
   for (const content of messages) {
     await interaction.followUp(quiet ? { content, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS } : { content, allowedMentions: NO_PINGS });
   }
+}
+
+/**
+ * /rotation: the weekly schedule as a card for everyone in the channel. A sheet that sends no days yet (an older
+ * deployment) gets its text shown instead.
+ */
+async function rotation(interaction: ChatInputCommandInteraction, w: Wiring): Promise<void> {
+  const def = TEXTS.schedule;
+  const outcome = await runExport(def, { post: false, isOfficer: officerCheck(interaction, w) }, w.callSheet);
+  if (outcome.kind === "failed" && outcome.setup) w.log(`/rotation: ${outcome.error}`);
+  if (outcome.kind !== "shown") {
+    await fail(interaction, exportText(outcome));
+    return;
+  }
+  if (!outcome.schedule) {
+    await showText(interaction, "schedule", false, officerCheck(interaction, w), w, false);
+    return;
+  }
+  const embeds = [scheduleEmbed(outcome.schedule)];
+  if (outcome.draft) {
+    // a draft may still change: only the officer who asked sees it, never the channel
+    await interaction.deleteReply().catch(() => undefined);
+    await interaction.followUp({ content: exportText(outcome), embeds, flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+    return;
+  }
+  await interaction.editReply({ embeds, allowedMentions: NO_PINGS });
 }
 
 /** The first message as the deferred reply, the rest as follow-ups, all only for the asker. */
