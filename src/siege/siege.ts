@@ -119,43 +119,99 @@ export function inviteEmbed(next: NextSiege, closed = false) {
   };
 }
 
+export interface PlanEmbed {
+  readonly title?: string;
+  readonly description?: string;
+  readonly color: number;
+  readonly fields: { name: string; value: string }[];
+  readonly footer?: { text: string };
+}
+
+const WAVES = 20;
+/** How many of the weakest unhelped members the post names; the rest are counted. */
+const AT_RISK_NAMED = 10;
+
+/** Lines into field values of at most 1024 characters; the first field gets `name`, the others "(continued)". */
+function fields(name: string, lines: readonly string[]): { name: string; value: string }[] {
+  const out: { name: string; value: string }[] = [];
+  let value = "";
+  for (const line of lines) {
+    if (value && value.length + 1 + line.length > 1024) {
+      out.push({ name: out.length ? `${name} (continued)` : name, value });
+      value = "";
+    }
+    value = value ? `${value}\n${line}` : line.slice(0, 1024);
+  }
+  if (value) out.push({ name: out.length ? `${name} (continued)` : name, value });
+  return out;
+}
+
 /**
- * The plan as embeds (each within Discord's limits) and the helpers to mention. Helpers are grouped, so everyone
- * finds their own line: who sends which squad where.
+ * The plan as a short post: what to do first (each helper's squads, one line per helper), then who gets help, then
+ * the weakest members nobody could help. The full list of every member's waves stays in the sheet.
  */
-export function planEmbeds(plan: SiegePlan): { title: string; description: string; color: number }[] {
+export function planEmbeds(plan: SiegePlan): PlanEmbed[] {
   const byHelper = new Map<string, string[]>();
   for (const o of plan.orders) {
-    const lines = byHelper.get(o.helper) ?? [];
-    lines.push(`${o.squad} to **${o.target}**${o.distance === null ? "" : ` (${o.distance} tiles)`}`);
-    byHelper.set(o.helper, lines);
+    const list = byHelper.get(o.helper) ?? [];
+    list.push(`${o.squad} to ${o.target}${o.distance === null ? "" : ` (${o.distance} tiles)`}`);
+    byHelper.set(o.helper, list);
   }
   const sends = [...byHelper.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([helper, lines]) => `**${helper}**: ${lines.join(", ")}`);
-  const waves = plan.attacked.map(
-    (t) => `${t.name}: ${t.alone} alone${t.withHelp > t.alone ? `, ${t.withHelp} with help` : ""}${t.signedUp ? "" : " (not signed up)"}`,
-  );
-  const intro = [
-    `Starts at ${stamp(plan.start)} (${stamp(plan.start, "R")}).`,
-    plan.summary,
-    sends.length ? "Send these squads as reinforcements before the first wave:" : "No squads to send: nobody who signed up can add a wave.",
-  ].join("\n");
-  const embeds: { title: string; description: string; color: number }[] = [];
-  let title = `Undead Siege - Stage ${plan.stage}: defense plan`;
-  let body = intro;
-  const push = (line: string, heading?: string) => {
-    const add = (heading ? `\n\n${heading}\n` : "\n") + line;
-    if (body.length + add.length > 3900) {
-      embeds.push({ title, description: body, color: GREEN });
-      title = `Undead Siege - Stage ${plan.stage} (continued)`;
-      body = heading ? `${heading}\n${line}` : line;
-    } else body += add;
+    .map(([helper, list]) => `**${helper}**: ${list.join(" · ")}`);
+  const helped = plan.attacked
+    .filter((t) => t.withHelp > t.alone)
+    .sort((a, b) => a.alone - b.alone)
+    .map((t) => `${t.name}: ${t.alone} → ${t.withHelp} waves`);
+  const atRisk = plan.attacked.filter((t) => t.withHelp === t.alone && t.alone < WAVES).sort((a, b) => a.alone - b.alone);
+  const alone = plan.attacked.reduce((n, t) => n + t.alone, 0);
+  const withHelp = plan.attacked.reduce((n, t) => n + t.withHelp, 0);
+  const total = plan.attacked.length * WAVES;
+
+  const all = [
+    ...(sends.length
+      ? fields("Send your squads", sends)
+      : [{ name: "Send your squads", value: "None: nobody who signed up can add a wave." }]),
+    ...(helped.length ? fields("Who gets help", helped) : []),
+    ...(atRisk.length
+      ? [
+          {
+            name: `Still falling before wave ${WAVES} (${atRisk.length})`,
+            value:
+              atRisk
+                .slice(0, AT_RISK_NAMED)
+                .map((t) => `${t.name} ${t.alone}`)
+                .join(" · ") + (atRisk.length > AT_RISK_NAMED ? ` · and ${atRisk.length - AT_RISK_NAMED} more` : ""),
+          },
+        ]
+      : []),
+  ];
+  const head: PlanEmbed = {
+    title: `Undead Siege - Stage ${plan.stage}: defense plan`,
+    color: GREEN,
+    description: [
+      `Starts at ${stamp(plan.start)} (${stamp(plan.start, "R")}).`,
+      "Send your squads as reinforcements **before the first wave**, and do not relocate.",
+      "",
+      `With this plan: **${withHelp} of ${total} waves** (${alone} without help).`,
+    ].join("\n"),
+    fields: [],
   };
-  sends.forEach((l, i) => push(l, i === 0 ? "**Reinforcements**" : undefined));
-  waves.forEach((l, i) => push(l, i === 0 ? "**Waves held (of 20)**" : undefined));
-  push(`Positions: ${plan.positions}`, " ");
-  embeds.push({ title, description: body, color: GREEN });
+  // Discord: 25 fields and 6000 characters per embed
+  const embeds: PlanEmbed[] = [head];
+  let size = (head.title?.length ?? 0) + (head.description?.length ?? 0);
+  for (const f of all) {
+    const last = embeds[embeds.length - 1]!;
+    if (last.fields.length >= 25 || size + f.name.length + f.value.length > 5500) {
+      embeds.push({ color: GREEN, fields: [] });
+      size = 0;
+    }
+    embeds[embeds.length - 1]!.fields.push(f);
+    size += f.name.length + f.value.length;
+  }
+  const footer = { text: `Positions: ${plan.positions} (server time). Every member's waves are in the Undead Siege sheet.` };
+  embeds[embeds.length - 1] = { ...embeds[embeds.length - 1]!, footer };
   return embeds.slice(0, 10);
 }
 

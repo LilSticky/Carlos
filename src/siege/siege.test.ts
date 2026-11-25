@@ -64,21 +64,41 @@ describe("texts", () => {
     ],
   });
 
-  it("reads the plan and groups the orders by helper", () => {
+  it("puts each helper's squads on one line, then who gets help and who still falls", () => {
     expect(plan).toBeDefined();
-    const [e] = planEmbeds(plan!);
-    expect(e!.description).toContain("**Ann**: Squad 2 to **Cy**, Squad 3 to **Bo** (3 tiles)");
-    expect(e!.description).toContain("**Bo**: Squad 2 to **Cy** (7 tiles)");
-    expect(e!.description).toContain("Cy: 6 alone, 14 with help (not signed up)");
-    expect(e!.description).toContain("Ann: 20 alone");
+    const atRisk = { name: "Eve", signedUp: false, alone: 9, withHelp: 9, helpers: [] };
+    const [e, more] = planEmbeds({ ...plan!, attacked: [...plan!.attacked, atRisk] });
+    expect(more).toBeUndefined();
+    expect(e!.title).toBe("Undead Siege - Stage 4: defense plan");
+    expect(e!.description).toContain("**43 of 60 waves** (35 without help)");
+    expect(e!.fields).toEqual([
+      { name: "Send your squads", value: "**Ann**: Squad 2 to Cy · Squad 3 to Bo (3 tiles)\n**Bo**: Squad 2 to Cy (7 tiles)" },
+      { name: "Who gets help", value: "Cy: 6 → 14 waves" },
+      { name: "Still falling before wave 20 (1)", value: "Eve 9" },
+    ]);
+    expect(e!.footer?.text).toContain("tracker 2026-11-26 19:40");
     expect(planHelpers(plan!)).toEqual(["Bo", "Ann"]);
   });
 
-  it("splits a long plan over several embeds", () => {
+  it("names only the ten weakest members nobody helps", () => {
+    const attacked = Array.from({ length: 14 }, (_, i) => ({ name: `M${i}`, signedUp: false, alone: i, withHelp: i, helpers: [] }));
+    const [e] = planEmbeds({ ...plan!, attacked, orders: [] });
+    expect(e!.fields[0]).toEqual({ name: "Send your squads", value: "None: nobody who signed up can add a wave." });
+    expect(e!.fields[1]!.name).toBe("Still falling before wave 20 (14)");
+    expect(e!.fields[1]!.value).toMatch(/^M0 0 · M1 1 .* M9 9 · and 4 more$/);
+  });
+
+  it("splits a long plan over several embeds within Discord's limits", () => {
     const orders = Array.from({ length: 200 }, (_, i) => ({ helper: `Member ${i}`, squad: "Squad 2", target: "Cy", distance: 5 }));
     const embeds = planEmbeds({ ...plan!, orders });
     expect(embeds.length).toBeGreaterThan(1);
-    for (const e of embeds) expect(e.description.length).toBeLessThanOrEqual(4096);
+    for (const e of embeds) {
+      expect(e.fields.length).toBeLessThanOrEqual(25);
+      for (const f of e.fields) expect(f.value.length).toBeLessThanOrEqual(1024);
+      const size = (e.title?.length ?? 0) + (e.description?.length ?? 0) + e.fields.reduce((n, f) => n + f.name.length + f.value.length, 0) + (e.footer?.text.length ?? 0);
+      expect(size).toBeLessThanOrEqual(6000);
+    }
+    expect(embeds[embeds.length - 1]!.footer).toBeDefined();
   });
 
   it("reads the join answer", () => {
