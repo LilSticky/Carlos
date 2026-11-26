@@ -31,6 +31,11 @@ const squad = z.object({
   ravenSkillStars: num,
   epigraphs: str,
   factionBonus: str,
+  faction: str,
+  factionSame: num,
+  factionMix: str,
+  factionKnown: z.boolean().optional().catch(undefined),
+  factionPercent: num,
   troopTier: str,
   heroes: z.array(hero).catch([]),
 });
@@ -165,7 +170,7 @@ function profileEmbed(p: CardPlayer, matches: readonly CardMatch[]): APIEmbed {
     const regained = r.lost && r.regained !== undefined ? `, ${percent(r.regained / r.lost, false)} back` : "";
     fields.push(
       ...field("Combat readiness", `**${r.score}**/100${r.bledOut ? " · bled out" : ""}`),
-      ...field("Might peak, 14 days", val(r.mightPeak)),
+      ...field("Might peak since the battle", val(r.mightPeak)),
       ...field("Last battle", r.lastBattle ? `${r.lastBattle}${r.lost ? `: lost ${short(r.lost)}${regained}` : ""}` : undefined),
     );
   }
@@ -208,6 +213,18 @@ function profileEmbed(p: CardPlayer, matches: readonly CardMatch[]): APIEmbed {
   } as APIEmbed;
 }
 
+/**
+ * The faction bonus of a squad, worked out from its heroes' factions by the sheet (3 of one faction 10%, 4 15%,
+ * 5 20%), with the Might it adds when a report showed it: "20% · 5 Warlock · +2.1M Might". With a hero's faction
+ * unknown the bonus may be higher. Without heroes: the percentage the report wrote, if any.
+ */
+export function factionBonusText(s: z.infer<typeof squad>): string | undefined {
+  const might = s.lineupBonus ? ` · +${short(s.lineupBonus)} Might` : "";
+  if (s.factionPercent === undefined || !s.factionMix) return s.factionBonus ? `${s.factionBonus}${might}` : undefined;
+  const pct = `${s.factionPercent}%${s.factionKnown === false && (s.factionSame ?? 0) < 5 ? " or more" : ""}`;
+  return `${pct} · ${s.factionMix}${might}`;
+}
+
 /** One squad seen in a report: its strength and the heroes' level, stars, gear and skills. */
 function squadEmbed(p: CardPlayer, s: z.infer<typeof squad>): APIEmbed {
   const rows = s.heroes.map((h) => [
@@ -218,6 +235,7 @@ function squadEmbed(p: CardPlayer, s: z.infer<typeof squad>): APIEmbed {
     (h.skills ?? "-").split("/").join(" "),
   ]);
   const fields = [
+    ...field("Faction bonus", factionBonusText(s), false),
     ...field("Lineup", val(s.lineup)),
     ...field("Raven", val(s.raven)),
     ...field("Tech", val(s.tech)),
@@ -226,9 +244,7 @@ function squadEmbed(p: CardPlayer, s: z.infer<typeof squad>): APIEmbed {
     ...field("Hall of Honor", val(s.hallOfHonor)),
     ...field("Gear", val(s.gearPower)),
     ...field("Skills", val(s.skillPower)),
-    ...field("Lineup bonus", val(s.lineupBonus)),
     ...field("Troop tier", s.troopTier),
-    ...field("Faction bonus", s.factionBonus),
   ];
   return {
     color: p.member ? COLORS.ours : COLORS.theirs,

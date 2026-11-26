@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardEmbeds, COLORS, epigraphText, gearText, readCard } from "./card.js";
+import { cardEmbeds, COLORS, epigraphText, factionBonusText, gearText, readCard } from "./card.js";
 
 const heroes = [
   { hero: "Hero A", level: 140, stars: 8, gear: "20/40/20/30", gearQuality: "orange/orange/orange/orange", skills: "12/20/14/15", faction: "Warrior" },
@@ -108,6 +108,24 @@ describe("cardEmbeds", () => {
     const all = cardEmbeds(readCard(big)!);
     expect(all.length).toBeLessThanOrEqual(10);
     expect(JSON.stringify(all).length).toBeLessThan(6000 + 500);
+  });
+});
+
+describe("factionBonusText", () => {
+  const base = { n: 1, heroes: [] };
+  it("shows the worked-out bonus with the heroes' factions and the Might it adds", () => {
+    expect(factionBonusText({ ...base, factionPercent: 20, factionSame: 5, factionMix: "5 Warlock", factionKnown: true, lineupBonus: 2100000 }))
+      .toBe("20% · 5 Warlock · +2.1M Might");
+    expect(factionBonusText({ ...base, factionPercent: 0, factionSame: 2, factionMix: "2 Warrior, 2 Ranger, 1 Warlock", factionKnown: true }))
+      .toBe("0% · 2 Warrior, 2 Ranger, 1 Warlock");
+  });
+  it("says the bonus may be higher while a hero's faction is unknown", () => {
+    expect(factionBonusText({ ...base, factionPercent: 15, factionSame: 4, factionMix: "4 Warrior, 1 unknown", factionKnown: false }))
+      .toBe("15% or more · 4 Warrior, 1 unknown");
+  });
+  it("falls back to the report's own percentage without heroes", () => {
+    expect(factionBonusText({ ...base, factionBonus: "20%" })).toBe("20%");
+    expect(factionBonusText(base)).toBeUndefined();
   });
 });
 
