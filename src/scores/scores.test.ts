@@ -43,7 +43,7 @@ describe("scoreEmbeds", () => {
     expect(empty.description).toContain("<#123>");
   });
   it("lists the running quests", () => {
-    const q = { quest: "Next KvK opponent", board: "Battle", from: "", until: "2026-11-29", multiplier: 2, bonus: null, reports: 0, points: 0, leader: "" };
+    const q = { quest: "Next KvK opponent", board: "Battle", from: "", until: "2026-11-29", days: "", type: "", note: "", runsToday: true, multiplier: 2, bonus: null, reports: 0, points: 0, leader: "" };
     const embeds = scoreEmbeds({ ...s, quests: [q] }, "123");
     expect(embeds[2]!.fields![0]!.value).toContain("points x2 · until 29.11.");
   });

@@ -36,6 +36,7 @@ import { SIEGE_BUTTON, SIEGE_LEAVE } from "../siege/siege.js";
 import { KVK_NO, KVK_YES } from "../kvk/kvk.js";
 import { kvkButton, startKvkBoard, type KvkDeps } from "./kvk-board.js";
 import { startDailyBoard, type DailyDeps } from "./daily-board.js";
+import { startQuestBoard, type QuestDeps } from "./quest-board.js";
 import { announce, HERE } from "./announce.js";
 import { siegeButton, siegeNow, startSiegeBoard, type SiegeDeps } from "./siege-board.js";
 import {
@@ -73,6 +74,8 @@ export interface Wiring {
   readonly kvk?: KvkDeps;
   /** The daily caravan message in the announcement channel. */
   readonly daily?: DailyDeps;
+  /** The post for a repeating Intel Quest on each of its days, in the announcement channel. */
+  readonly quests?: QuestDeps;
   /** The video inbox: ranking recordings of R4 and R5; only with VIDEO_CHANNEL_ID. */
   readonly video?: VideoDeps;
   /** The guide forum: posts explaining Carlos, edited when they change; only with GUIDE_FORUM_ID. */
@@ -101,6 +104,7 @@ export async function connect(w: Wiring): Promise<Client> {
     if (w.siege?.channelId) startSiegeBoard(ready, w.siege);
     if (w.kvk?.channelId) startKvkBoard(ready, w.kvk);
     if (w.daily?.channelId) startDailyBoard(ready, w.daily);
+    if (w.quests?.channelId) startQuestBoard(ready, w.quests);
     if (w.guide) void syncGuide(ready, w.guide).catch((e: unknown) => w.log(`Guide forum not updated: ${String(e)}`));
     if (w.scores) startScoresBoard(ready, w.scores);
     if (w.video) void catchUpVideos(ready, w.video).catch((e: unknown) => w.log(`Video inbox catch-up failed: ${String(e)}`));

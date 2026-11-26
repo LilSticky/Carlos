@@ -14,6 +14,10 @@ import { loadPictures } from "./guide/pictures.js";
 import { SiegeStore } from "./storage/siege-store.js";
 import { KvkStore } from "./storage/kvk-store.js";
 import { DailyStore } from "./storage/daily-store.js";
+import { QuestStore } from "./storage/quest-store.js";
+import { questCards, type QuestDeps } from "./discord/quest-board.js";
+import { readKvkNext } from "./kvk/kvk.js";
+import { serverClock } from "./scores/days.js";
 import { VideoStore } from "./storage/video-store.js";
 import type { RecordingKind } from "./sheet/sheet.js";
 import { MAX_VIDEO_BYTES } from "./recordings/recording.js";
@@ -54,6 +58,26 @@ const recordingKinds = async () => {
   return kindsCache.kinds;
 };
 const officerOfId = (id: string) => isOfficer(id, { memberOf: (d) => links.memberOf(d), officers: () => officerList.names() });
+
+// the repeating Intel Quest cards (combat readiness check) go out with the KvK vote card on the day it is posted
+const kvkStore = new KvkStore(db);
+const quests: QuestDeps = {
+  callSheet,
+  store: new QuestStore(db),
+  channelId: config.announceChannelId,
+  uploadChannelId: config.uploadChannelId,
+  ...(config.sheets.kvk
+    ? {
+        kvkInviteLater: async (now: Date) => {
+          const next = readKvkNext(await callSheet("kvk", "kvkNext", {}));
+          if (!next || kvkStore.posts(next.day).inviteMessageId) return false;
+          return next.inviteAt > now && serverClock(next.inviteAt).day === serverClock(now).day;
+        },
+      }
+    : {}),
+  now: () => new Date(),
+  log,
+};
 
 const client = await connect({
   config,
@@ -104,9 +128,10 @@ const client = await connect({
     ? {
         kvk: {
           callSheet,
-          store: new KvkStore(db),
+          store: kvkStore,
           channelId: config.announceChannelId,
           memberOf: (id: string) => links.memberOf(id),
+          questCards: (now: Date) => questCards(quests, now, true),
           now: () => new Date(),
           log,
         },
@@ -124,6 +149,7 @@ const client = await connect({
         },
       }
     : {}),
+  quests,
   ...(config.guideForumId
     ? {
         guide: {

@@ -1,6 +1,7 @@
 import type { APIEmbed, APIEmbedField } from "discord.js";
 import { z } from "zod";
 import { cut, dayMonth, short } from "../cards/format.js";
+import { dayList } from "./days.js";
 
 /**
  * The intel scoreboards of Alliance Members (members/Scores.js, Bot.js action `scores`): points for the reports
@@ -29,6 +30,13 @@ const quest = z.object({
   board: text,
   from: text,
   until: text,
+  /** The days of the AD week it runs on, as the officers wrote them ("IV, Rest Day"); "" = every day. */
+  days: text,
+  /** The report type it asks for ("Barracks"). */
+  type: text,
+  note: text,
+  /** Today is one of its days (server time). */
+  runsToday: z.boolean().catch(true),
   multiplier: z.number().nullable().catch(null),
   bonus: z.number().nullable().catch(null),
   reports: num,
@@ -39,6 +47,8 @@ const scores = z.object({
   battle: z.array(battleRow),
   scouting: z.array(scoutRow),
   since: text,
+  /** The server date the sheet answered on. */
+  today: text,
   quests: z.array(quest).catch([]),
 });
 export type Scores = z.infer<typeof scores>;
@@ -97,7 +107,8 @@ function board(
 
 function questLine(q: Scores["quests"][number]): APIEmbedField {
   const reward = q.multiplier && q.multiplier !== 1 ? `points x${points(q.multiplier)}` : q.bonus ? `+${points(q.bonus)} per new report` : "";
-  const when = q.until ? `until ${dayMonth(q.until)}` : "open end";
+  const repeat = q.days ? dayList(q.days) : "";
+  const when = [repeat ? `every ${repeat}` : "", q.until ? `until ${dayMonth(q.until)}` : repeat ? "" : "open end"].filter(Boolean).join(", ");
   const head = [q.board ? `${q.board} board` : "", reward, when].filter(Boolean).join(" · ");
   const score = q.reports
     ? `${plural(q.reports, "report")} so far, ${points(q.points)} pts${q.leader ? ` · leading: **${q.leader}**` : ""}`
