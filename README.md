@@ -66,7 +66,7 @@ Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to i
   the KvK vote card with Participate and Stay out. Answers go into the sheet's Discord Votes tab and win over the
   imported in-game vote. When Day VI starts the card closes and Carlos posts the KvK Readiness card.
 - Coachman Express (`COACHMAN_URL`, action `daily`): three hours before each day's set-up Carlos posts that day's
-  caravan message in the announcement channel, without `@here`, and mentions the driver when their account is
+  caravan card (driver, guard, set-up and boarding as Discord timestamps) in the announcement channel, without `@here`, and mentions the driver when their account is
   linked with /iam. Once a day; a restart does not post it again.
 - All invitation cards, votes and `/lead post` announcements go to the announcement channel (`ANNOUNCE_CHANNEL_ID`)
   with `@here`. Carlos needs the permission *Mention @everyone, @here and All Roles* there.

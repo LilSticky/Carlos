@@ -141,7 +141,7 @@ export function guidePosts(ctx: GuideContext): GuidePost[] {
   // the announcement channel: everything Carlos posts there by himself
   const announced: string[] = [];
   if (ctx.sheets.coachman) {
-    announced.push("## Coachman Express\nEvery day the caravan message, three hours before set-up. The driver of the day is tagged.");
+    announced.push("## Coachman Express\nEvery day a caravan card, three hours before set-up: who drives, set-up and boarding in your own time with a countdown. The driver of the day is tagged.");
   }
   if (ctx.sheets.kvk) {
     announced.push(
