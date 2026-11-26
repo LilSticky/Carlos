@@ -86,7 +86,7 @@ export function guidePosts(ctx) {
     // the announcement channel: everything Carlos posts there by himself
     const announced = [];
     if (ctx.sheets.coachman) {
-        announced.push("## Coachman Express\nEvery day the caravan message, three hours before set-up. The driver of the day is tagged.");
+        announced.push("## Coachman Express\nEvery day a caravan card, three hours before set-up: who drives, set-up and boarding in your own time with a countdown. The driver of the day is tagged.");
     }
     if (ctx.sheets.kvk) {
         announced.push("## KvK vote\nBefore each Royal City battle on Day VI: press **Participate** or **Stay out**. You can change it until Day VI " +

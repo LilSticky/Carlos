@@ -46,8 +46,8 @@ export function startDailyBoard(client, d) {
                 next = fresh;
                 return;
             }
-            const { content, users } = dailyMessage(fresh, fresh.coach ? d.discordOf(fresh.coach) : undefined);
-            const msg = await announce(client, d.channelId, { content, allowedMentions: { users } }, false);
+            const { users, ...post } = dailyMessage(fresh, fresh.coach ? d.discordOf(fresh.coach) : undefined);
+            const msg = await announce(client, d.channelId, { ...post, allowedMentions: { users } }, false);
             d.store.markPosted(fresh.day, d.channelId, msg.id, now);
             d.log(`Daily post for ${fresh.day} (${fresh.coach}${users.length ? ", mentioned" : ""}).`);
         }
