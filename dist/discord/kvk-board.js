@@ -51,9 +51,16 @@ export function startKvkBoard(client, d) {
     return () => clearInterval(timer);
 }
 async function postInvite(client, next, d) {
-    const msg = await announce(client, d.channelId, { content: HERE, embeds: [kvkInviteEmbed(next)], components: [voteRow(next.day)] }, true);
+    // a quest card that cannot be read must not hold up the vote
+    const quests = d.questCards ? await d.questCards(d.now()).catch((e) => {
+        d.log(`KvK ${next.day}: quest cards left out (${e instanceof Error ? e.message : String(e)}).`);
+        return undefined;
+    }) : undefined;
+    const embeds = [kvkInviteEmbed(next), ...(quests?.embeds ?? [])];
+    const msg = await announce(client, d.channelId, { content: HERE, embeds, components: [voteRow(next.day)] }, true);
     d.store.invited(next.day, d.channelId, msg.id);
-    d.log(`KvK ${next.day}: vote card posted.`);
+    quests?.posted(d.channelId, msg.id);
+    d.log(`KvK ${next.day}: vote card posted${quests?.names.length ? ` with ${quests.names.join(", ")}` : ""}.`);
 }
 async function postReadiness(client, next, d) {
     const r = readKvkReadiness(await d.callSheet("kvk", "kvkReadiness", { day: next.day }));
@@ -76,7 +83,8 @@ async function closeInvite(client, next, d) {
         if (!channel?.isSendable())
             return;
         const msg = await channel.messages.fetch(posts.inviteMessageId);
-        await msg.edit({ embeds: [kvkInviteEmbed(next, true)], components: [] });
+        // the quest cards that went out with the vote stay
+        await msg.edit({ embeds: [kvkInviteEmbed(next, true), ...msg.embeds.slice(1).map((e) => e.toJSON())], components: [] });
     }
     catch (e) {
         d.log(`KvK ${next.day}: vote card not closed (${String(e)}).`);
@@ -108,9 +116,10 @@ export async function kvkButton(interaction, d) {
     await interaction.editReply(yes
         ? `You are in for the KvK battle, ${member}. Changed your mind? Press **Stay out** before Day VI starts.`
         : `Noted: you stay out of the KvK battle, ${member}. Press **Participate** if you can make it after all.`);
-    const embed = interaction.message.embeds[0];
+    const [embed, ...others] = interaction.message.embeds;
     if (embed) {
-        await interaction.message.edit({ embeds: [{ ...embed.toJSON(), fields: voteFields(answer.yes, answer.no) }] }).catch(() => undefined);
+        const embeds = [{ ...embed.toJSON(), fields: voteFields(answer.yes, answer.no) }, ...others.map((e) => e.toJSON())];
+        await interaction.message.edit({ embeds }).catch(() => undefined);
     }
 }
 //# sourceMappingURL=kvk-board.js.map

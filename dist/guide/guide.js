@@ -11,7 +11,7 @@ export const SCREENSHOT_GROUPS = [
             { key: "squads", name: "Squad overview", how: "Triangular Arena (every second week): the screen with all your squads and their Squad Might." },
             { key: "hero", name: "Hero page", how: "Open a hero. Send the tabs **Stats**, **Stars** and **Skill**." },
             { key: "roster", name: "Hero list", how: "Hero screen, tab **All**. Scroll and send each part." },
-            { key: "barracks", name: "Barracks", how: "The Barracks window with your soldiers per tier." },
+            { key: "barracks", name: "Barracks", how: "The Barracks window with your soldiers per tier. Once a day it earns 5 points, more on the days of the combat readiness check (Day IV and Rest Day)." },
             { key: "epigraph", name: "Raven Epigraph", how: "Tap one epigraph: its info window." },
         ],
     },

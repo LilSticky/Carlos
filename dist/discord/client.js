@@ -17,6 +17,7 @@ import { SIEGE_BUTTON, SIEGE_LEAVE } from "../siege/siege.js";
 import { KVK_NO, KVK_YES } from "../kvk/kvk.js";
 import { kvkButton, startKvkBoard } from "./kvk-board.js";
 import { startDailyBoard } from "./daily-board.js";
+import { startQuestBoard } from "./quest-board.js";
 import { announce, HERE } from "./announce.js";
 import { siegeButton, siegeNow, startSiegeBoard } from "./siege-board.js";
 import { allianceEmbed, allianceNotFoundText, ambiguousText, matchOptions, playerArgs, playerEmbed, playerNotFoundText, readAllianceAnswer, readPlayerAnswer, rosterOptions, } from "../tracker/tracker.js";
@@ -43,6 +44,8 @@ export async function connect(w) {
             startKvkBoard(ready, w.kvk);
         if (w.daily?.channelId)
             startDailyBoard(ready, w.daily);
+        if (w.quests?.channelId)
+            startQuestBoard(ready, w.quests);
         if (w.guide)
             void syncGuide(ready, w.guide).catch((e) => w.log(`Guide forum not updated: ${String(e)}`));
         if (w.scores)
