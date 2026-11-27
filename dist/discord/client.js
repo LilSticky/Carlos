@@ -14,8 +14,7 @@ import { findHelp, helpDetails, helpOverview } from "./help.js";
 import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
 import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON, SIEGE_LEAVE } from "../siege/siege.js";
-import { KVK_NO, KVK_YES } from "../kvk/kvk.js";
-import { kvkButton, startKvkBoard } from "./kvk-board.js";
+import { isKvkButton, kvkButton, startKvkBoard } from "./kvk-board.js";
 import { startDailyBoard } from "./daily-board.js";
 import { startQuestBoard } from "./quest-board.js";
 import { announce, HERE } from "./announce.js";
@@ -73,7 +72,7 @@ export async function connect(w) {
         else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
             void retrace(interaction, w).catch((e) => w.log(`Retrace failed: ${String(e)}`));
         }
-        else if (interaction.isButton() && (interaction.customId.startsWith(KVK_YES) || interaction.customId.startsWith(KVK_NO)) && w.kvk) {
+        else if (interaction.isButton() && isKvkButton(interaction.customId) && w.kvk) {
             void kvkButton(interaction, w.kvk).catch((e) => w.log(`KvK answer failed: ${String(e)}`));
         }
         else if (interaction.isButton() && (interaction.customId.startsWith(SIEGE_BUTTON) || interaction.customId.startsWith(SIEGE_LEAVE)) && w.siege) {

@@ -89,7 +89,8 @@ export function guidePosts(ctx) {
         announced.push("## Coachman Express\nEvery day a caravan card, three hours before set-up: who drives, set-up and boarding in your own time with a countdown. The driver of the day is tagged.");
     }
     if (ctx.sheets.kvk) {
-        announced.push("## KvK vote\nBefore each Royal City battle on Day VI: press **Participate** or **Stay out**. You can change it until Day VI " +
+        announced.push("## KvK vote\nBefore each Royal City battle on Day VI: press **Participate** or **Stay out**, or **Don't know yet** if you can't tell " +
+            "yet. You can change it until Day VI " +
             "starts; please vote in game too, it shows your Might. Then Carlos posts who comes and how strong we are.");
     }
     if (ctx.sheets.siege) {

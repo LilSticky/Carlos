@@ -15,13 +15,21 @@ const nextAnswer = z.object({
     open: z.boolean(),
     yes: z.array(z.string()),
     no: z.array(z.string()),
+    maybe: z.array(z.string()).default([]),
     members: z.number(),
 });
 export function readKvkNext(raw) {
     const p = nextAnswer.safeParse(raw);
     return p.success ? p.data : undefined;
 }
-const answerAnswer = z.object({ day, vote: z.enum(["Yes", "No"]), changed: z.boolean(), yes: z.array(z.string()), no: z.array(z.string()) });
+const answerAnswer = z.object({
+    day,
+    vote: z.enum(["Yes", "No", "Maybe"]),
+    changed: z.boolean(),
+    yes: z.array(z.string()),
+    no: z.array(z.string()),
+    maybe: z.array(z.string()).default([]),
+});
 export function readKvkAnswer(raw) {
     const p = answerAnswer.safeParse(raw);
     return p.success ? p.data : undefined;
@@ -39,6 +47,8 @@ const readinessAnswer = z.object({
     strongest: z.array(z.object({ name: z.string(), might: z.number() })),
     readiness: z.object({ min: z.number(), likely: group, unknown: z.number(), bled: z.array(z.string()) }).nullable(),
     noAnswer: z.array(z.string()),
+    /** Voted Don't know yet: in `maybe` like those without an answer. */
+    unsure: z.array(z.string()).default([]),
 });
 export function readKvkReadiness(raw) {
     const p = readinessAnswer.safeParse(raw);
@@ -57,6 +67,7 @@ export function kvkDue(next, posts, now) {
 }
 export const KVK_YES = "kvk-yes:";
 export const KVK_NO = "kvk-no:";
+export const KVK_MAYBE = "kvk-maybe:";
 const GREEN = 0x356854;
 function names(list, max = 1000) {
     if (!list.length)
@@ -75,10 +86,11 @@ export function millions(n) {
     return `${(n / 1e6).toFixed(1)}M`;
 }
 /** The answer lists of the vote card. */
-export function voteFields(yes, no) {
+export function voteFields(yes, no, maybe = []) {
     return [
         { name: `Participate (${yes.length})`, value: names(yes) },
         { name: `Stay out (${no.length})`, value: names(no) },
+        { name: `Don't know yet (${maybe.length})`, value: names(maybe) },
     ];
 }
 /** The vote card; `closed` once Day VI started. */
@@ -90,11 +102,12 @@ export function kvkInviteEmbed(next, closed = false) {
             ? "The vote is closed. The KvK Readiness card is posted below."
             : [
                 `The battle starts at ${stamp(next.battleAt)} on ${stamp(next.battleAt, "F")}.`,
-                "Will you make it? Press **Participate** or **Stay out**. You can change your answer until Day VI starts " +
+                "Will you make it? Press **Participate** or **Stay out**, or **Don't know yet** if you can't tell yet. " +
+                    "You can change your answer until Day VI starts " +
                     `(${stamp(next.closeAt, "R")}).`,
                 "Your answer here counts over the in-game vote. Please vote in game too: it shows your Might.",
             ].join("\n\n"),
-        fields: voteFields(next.yes, next.no),
+        fields: voteFields(next.yes, next.no, next.maybe),
     };
 }
 /** The KvK Readiness card: the vote and the battle strength in short. */
@@ -104,7 +117,8 @@ export function readinessEmbed(r) {
         "",
         `**Participate: ${r.yes.count}** · ${millions(r.yes.might)} Might`,
         `Stay out: ${r.no.count} · ${millions(r.no.might)} Might`,
-        `No answer: ${r.maybe.count} · ${millions(r.maybe.might)} Might`,
+        `No answer or don't know yet: ${r.maybe.count} · ${millions(r.maybe.might)} Might` +
+            (r.unsure.length ? ` (${r.unsure.length} don't know yet)` : ""),
     ];
     const fields = [];
     if (r.readiness) {
