@@ -9,6 +9,7 @@ const next: NextKvk = {
   open: true,
   yes: ["Ann"],
   no: ["Bo"],
+  maybe: ["Cy"],
   members: 40,
 };
 const none = { inviteMessageId: null, readinessPosted: false };
@@ -29,6 +30,7 @@ const readiness: KvkReadiness = {
   strongest: [{ name: "Ann", might: 70_000_000 }],
   readiness: { min: 60, likely: { count: 1, might: 70_000_000, level: 30 }, unknown: 1, bled: ["Cy"] },
   noAnswer: ["Dee"],
+  unsure: ["Eve"],
 };
 
 describe("readers", () => {
@@ -37,7 +39,10 @@ describe("readers", () => {
     expect(readKvkNext(raw)).toEqual(next);
     expect(readKvkNext({ day: "x" })).toBeUndefined();
     expect(readKvkAnswer({ day: "2026-11-28", vote: "No", changed: true, yes: [], no: ["Ann"] })?.vote).toBe("No");
-    expect(readKvkAnswer({ day: "2026-11-28", vote: "Maybe", changed: true, yes: [], no: [] })).toBeUndefined();
+    expect(readKvkAnswer({ day: "2026-11-28", vote: "Maybe", changed: true, yes: [], no: [], maybe: ["Ann"] })?.maybe).toEqual(["Ann"]);
+    expect(readKvkAnswer({ day: "2026-11-28", vote: "Later", changed: true, yes: [], no: [] })).toBeUndefined();
+    // a sheet without Don't know yet still reads
+    expect(readKvkAnswer({ day: "2026-11-28", vote: "No", changed: true, yes: [], no: [] })?.maybe).toEqual([]);
     expect(readKvkReadiness({ ...readiness, battleAt: readiness.battleAt.toISOString() })).toEqual(readiness);
   });
 });
@@ -64,6 +69,7 @@ describe("cards", () => {
     expect(open.fields).toEqual([
       { name: "Participate (1)", value: "Ann" },
       { name: "Stay out (1)", value: "Bo" },
+      { name: "Don't know yet (1)", value: "Cy" },
     ]);
     expect(open.description).toContain(`<t:${next.battleAt.getTime() / 1000}:t>`);
     expect(kvkInviteEmbed(next, true).description).toContain("closed");
@@ -71,6 +77,7 @@ describe("cards", () => {
   it("sums up the vote and the battle strength", () => {
     const e = readinessEmbed(readiness);
     expect(e.description).toContain("**Participate: 2** · 120.0M Might");
+    expect(e.description).toContain("No answer or don't know yet: 3 · 90.0M Might (1 don't know yet)");
     expect(e.fields.map((f) => f.name)).toEqual(["Likely to fight", "Participants by level", "Strongest", "Heal or shield before the battle"]);
     expect(e.fields[1]!.value).toBe("Lv 30: 2 · 120.0M");
     expect(readinessEmbed({ ...readiness, readiness: null }).fields.map((f) => f.name)).not.toContain("Likely to fight");

@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type ButtonInteraction, type Client } from "discord.js";
 import type { CallSheet } from "../exports/exports.js";
 import {
+  KVK_MAYBE,
   KVK_NO,
   KVK_YES,
   kvkDue,
@@ -37,6 +38,7 @@ function voteRow(day: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder().setCustomId(KVK_YES + day).setLabel("Participate").setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(KVK_NO + day).setLabel("Stay out").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(KVK_MAYBE + day).setLabel("Don't know yet").setStyle(ButtonStyle.Secondary),
   );
 }
 
@@ -117,10 +119,22 @@ async function closeInvite(client: Client, next: NextKvk, d: KvkDeps): Promise<v
   }
 }
 
-/** Participate or Stay out: writes the linked member's answer and updates the lists on the card. */
+const BUTTONS = [
+  { prefix: KVK_YES, vote: "Yes", log: "participates" },
+  { prefix: KVK_NO, vote: "No", log: "stays out" },
+  { prefix: KVK_MAYBE, vote: "Maybe", log: "does not know yet" },
+] as const;
+
+/** Whether a button is one of the KvK vote card. */
+export function isKvkButton(customId: string): boolean {
+  return BUTTONS.some((b) => customId.startsWith(b.prefix));
+}
+
+/** Participate, Stay out or Don't know yet: writes the linked member's answer and updates the lists on the card. */
 export async function kvkButton(interaction: ButtonInteraction, d: KvkDeps): Promise<void> {
-  const yes = interaction.customId.startsWith(KVK_YES);
-  const day = interaction.customId.slice((yes ? KVK_YES : KVK_NO).length);
+  const button = BUTTONS.find((b) => interaction.customId.startsWith(b.prefix));
+  if (!button) return;
+  const day = interaction.customId.slice(button.prefix.length);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const member = d.memberOf(interaction.user.id);
   if (!member) {
@@ -129,7 +143,7 @@ export async function kvkButton(interaction: ButtonInteraction, d: KvkDeps): Pro
   }
   let answer;
   try {
-    answer = readKvkAnswer(await d.callSheet("kvk", "kvkAnswer", { day, member, vote: yes ? "Yes" : "No" }));
+    answer = readKvkAnswer(await d.callSheet("kvk", "kvkAnswer", { day, member, vote: button.vote }));
   } catch (e) {
     await interaction.editReply(e instanceof SheetError ? e.message : "Something went wrong. Please try again.");
     return;
@@ -138,15 +152,17 @@ export async function kvkButton(interaction: ButtonInteraction, d: KvkDeps): Pro
     await interaction.editReply("The KvK sheet sent an answer Carlos cannot read.");
     return;
   }
-  d.log(`KvK ${day}: ${member} ${yes ? "participates" : "stays out"}${answer.changed ? "" : " (again)"}.`);
+  d.log(`KvK ${day}: ${member} ${button.log}${answer.changed ? "" : " (again)"}.`);
   await interaction.editReply(
-    yes
+    button.vote === "Yes"
       ? `You are in for the KvK battle, ${member}. Changed your mind? Press **Stay out** before Day VI starts.`
-      : `Noted: you stay out of the KvK battle, ${member}. Press **Participate** if you can make it after all.`,
+      : button.vote === "No"
+        ? `Noted: you stay out of the KvK battle, ${member}. Press **Participate** if you can make it after all.`
+        : `Noted: you don't know yet, ${member}. Thanks for answering. Press **Participate** or **Stay out** once you know, before Day VI starts.`,
   );
   const [embed, ...others] = interaction.message.embeds;
   if (embed) {
-    const embeds = [{ ...embed.toJSON(), fields: voteFields(answer.yes, answer.no) }, ...others.map((e) => e.toJSON())];
+    const embeds = [{ ...embed.toJSON(), fields: voteFields(answer.yes, answer.no, answer.maybe) }, ...others.map((e) => e.toJSON())];
     await interaction.message.edit({ embeds }).catch(() => undefined);
   }
 }

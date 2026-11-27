@@ -33,8 +33,7 @@ import { findHelp, helpDetails, helpOverview } from "./help.js";
 import { canRetryUpload, exportText, iamText, linkText, overlayText, uploadText } from "./texts.js";
 import { overlayKey } from "../overlay/overlay.js";
 import { SIEGE_BUTTON, SIEGE_LEAVE } from "../siege/siege.js";
-import { KVK_NO, KVK_YES } from "../kvk/kvk.js";
-import { kvkButton, startKvkBoard, type KvkDeps } from "./kvk-board.js";
+import { isKvkButton, kvkButton, startKvkBoard, type KvkDeps } from "./kvk-board.js";
 import { startDailyBoard, type DailyDeps } from "./daily-board.js";
 import { startQuestBoard, type QuestDeps } from "./quest-board.js";
 import { announce, HERE } from "./announce.js";
@@ -123,7 +122,7 @@ export async function connect(w: Wiring): Promise<Client> {
       void videoMenu(interaction, w.video).catch((e: unknown) => w.log(`Video menu failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(RETRACE)) {
       void retrace(interaction, w).catch((e: unknown) => w.log(`Retrace failed: ${String(e)}`));
-    } else if (interaction.isButton() && (interaction.customId.startsWith(KVK_YES) || interaction.customId.startsWith(KVK_NO)) && w.kvk) {
+    } else if (interaction.isButton() && isKvkButton(interaction.customId) && w.kvk) {
       void kvkButton(interaction, w.kvk).catch((e: unknown) => w.log(`KvK answer failed: ${String(e)}`));
     } else if (interaction.isButton() && (interaction.customId.startsWith(SIEGE_BUTTON) || interaction.customId.startsWith(SIEGE_LEAVE)) && w.siege) {
       void siegeButton(interaction, w.siege).catch((e: unknown) => w.log(`Siege sign-up failed: ${String(e)}`));

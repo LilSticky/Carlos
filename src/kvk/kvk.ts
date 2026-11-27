@@ -3,8 +3,9 @@ import { stamp } from "../siege/siege.js";
 
 /**
  * The KvK vote: KvK Planning (rebirth-sheets kvk/BotActions.js, DiscordVote.js) knows the coming Day VI battle and
- * who answered. Carlos posts one vote card with Participate and Stay out before it, writes every press into the sheet
- * (a Discord answer wins over the imported in-game vote), and when Day VI starts closes the card and posts the
+ * who answered. Carlos posts one vote card with Participate, Stay out and Don't know yet before it, writes every press
+ * into the sheet (a Discord answer wins over the imported in-game vote; Don't know yet shows the member read the card,
+ * but counts like no answer for the battle), and when Day VI starts closes the card and posts the
  * KvK Readiness card: the vote and the battle strength in short.
  */
 export interface NextKvk {
@@ -17,6 +18,8 @@ export interface NextKvk {
   readonly open: boolean;
   readonly yes: readonly string[];
   readonly no: readonly string[];
+  /** Don't know yet. */
+  readonly maybe: readonly string[];
   readonly members: number;
 }
 
@@ -35,6 +38,7 @@ const nextAnswer = z.object({
   open: z.boolean(),
   yes: z.array(z.string()),
   no: z.array(z.string()),
+  maybe: z.array(z.string()).default([]),
   members: z.number(),
 });
 export function readKvkNext(raw: unknown): NextKvk | undefined {
@@ -42,7 +46,14 @@ export function readKvkNext(raw: unknown): NextKvk | undefined {
   return p.success ? p.data : undefined;
 }
 
-const answerAnswer = z.object({ day, vote: z.enum(["Yes", "No"]), changed: z.boolean(), yes: z.array(z.string()), no: z.array(z.string()) });
+const answerAnswer = z.object({
+  day,
+  vote: z.enum(["Yes", "No", "Maybe"]),
+  changed: z.boolean(),
+  yes: z.array(z.string()),
+  no: z.array(z.string()),
+  maybe: z.array(z.string()).default([]),
+});
 export type KvkAnswer = z.infer<typeof answerAnswer>;
 export function readKvkAnswer(raw: unknown): KvkAnswer | undefined {
   const p = answerAnswer.safeParse(raw);
@@ -62,6 +73,8 @@ const readinessAnswer = z.object({
   strongest: z.array(z.object({ name: z.string(), might: z.number() })),
   readiness: z.object({ min: z.number(), likely: group, unknown: z.number(), bled: z.array(z.string()) }).nullable(),
   noAnswer: z.array(z.string()),
+  /** Voted Don't know yet: in `maybe` like those without an answer. */
+  unsure: z.array(z.string()).default([]),
 });
 export type KvkReadiness = z.infer<typeof readinessAnswer>;
 export function readKvkReadiness(raw: unknown): KvkReadiness | undefined {
@@ -88,6 +101,7 @@ export function kvkDue(next: NextKvk, posts: KvkPosts, now: Date): "invite" | "r
 
 export const KVK_YES = "kvk-yes:";
 export const KVK_NO = "kvk-no:";
+export const KVK_MAYBE = "kvk-maybe:";
 const GREEN = 0x356854;
 
 function names(list: readonly string[], max = 1000): string {
@@ -107,10 +121,11 @@ export function millions(n: number): string {
 }
 
 /** The answer lists of the vote card. */
-export function voteFields(yes: readonly string[], no: readonly string[]) {
+export function voteFields(yes: readonly string[], no: readonly string[], maybe: readonly string[] = []) {
   return [
     { name: `Participate (${yes.length})`, value: names(yes) },
     { name: `Stay out (${no.length})`, value: names(no) },
+    { name: `Don't know yet (${maybe.length})`, value: names(maybe) },
   ];
 }
 
@@ -123,11 +138,12 @@ export function kvkInviteEmbed(next: NextKvk, closed = false) {
       ? "The vote is closed. The KvK Readiness card is posted below."
       : [
           `The battle starts at ${stamp(next.battleAt)} on ${stamp(next.battleAt, "F")}.`,
-          "Will you make it? Press **Participate** or **Stay out**. You can change your answer until Day VI starts " +
+          "Will you make it? Press **Participate** or **Stay out**, or **Don't know yet** if you can't tell yet. " +
+            "You can change your answer until Day VI starts " +
             `(${stamp(next.closeAt, "R")}).`,
           "Your answer here counts over the in-game vote. Please vote in game too: it shows your Might.",
         ].join("\n\n"),
-    fields: voteFields(next.yes, next.no),
+    fields: voteFields(next.yes, next.no, next.maybe),
   };
 }
 
@@ -138,7 +154,8 @@ export function readinessEmbed(r: KvkReadiness) {
     "",
     `**Participate: ${r.yes.count}** · ${millions(r.yes.might)} Might`,
     `Stay out: ${r.no.count} · ${millions(r.no.might)} Might`,
-    `No answer: ${r.maybe.count} · ${millions(r.maybe.might)} Might`,
+    `No answer or don't know yet: ${r.maybe.count} · ${millions(r.maybe.might)} Might` +
+      (r.unsure.length ? ` (${r.unsure.length} don't know yet)` : ""),
   ];
   const fields: { name: string; value: string; inline?: boolean }[] = [];
   if (r.readiness) {

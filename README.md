@@ -63,7 +63,7 @@ Every sheet has its own web app, and Carlos sends `{ secret, action, ... }` to i
   and posts the defense plan before the start, mentioning the members who send squads. `/lead siege` makes and
   posts the plan at any time.
 - KvK Planning (`KVK_URL`, actions `kvkNext`, `kvkAnswer`, `kvkReadiness`): before each Day VI battle Carlos posts
-  the KvK vote card with Participate and Stay out. Answers go into the sheet's Discord Votes tab and win over the
+  the KvK vote card with Participate, Stay out and Don't know yet (stored as Maybe). Answers go into the sheet's Discord Votes tab and win over the
   imported in-game vote. When Day VI starts the card closes and Carlos posts the KvK Readiness card.
 - Coachman Express (`COACHMAN_URL`, action `daily`): three hours before each day's set-up Carlos posts that day's
   caravan card (driver, guard, set-up and boarding as Discord timestamps) in the announcement channel, without `@here`, and mentions the driver when their account is
