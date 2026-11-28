@@ -55,6 +55,11 @@ import {
 import { syncGuide, type GuideDeps } from "./guide-forum.js";
 import { startScoresBoard, type ScoresDeps } from "./scores-board.js";
 import { catchUpVideos, VIDEO_MENU, videoMenu, videoPost, type VideoDeps } from "./video-inbox.js";
+import { ALREADY_GONE, fill, FUCKOFF, fuckoffCommand, isOwner, LEAVING, NOT_YOURS, pick, SNUBS, Sulk } from "./fuckoff.js";
+
+/** LittleGrayFoxy's /fuckoff: while Carlos sulks, LittleGrayFoxy's commands get a snub instead of an answer. */
+const sulk = new Sulk();
+
 
 export interface Wiring {
   readonly config: Config;
@@ -128,6 +133,8 @@ export async function connect(w: Wiring): Promise<Client> {
       void siegeButton(interaction, w.siege).catch((e: unknown) => w.log(`Siege sign-up failed: ${String(e)}`));
     } else if (interaction.isButton() && interaction.customId.startsWith(RETRY_UPLOAD)) {
       void retryUpload(interaction, w).catch((e: unknown) => w.log(`Upload retry failed: ${String(e)}`));
+    } else if (interaction.isChatInputCommand() && (interaction.commandName === FUCKOFF || sulking(interaction, w))) {
+      void fuckoff(interaction, w).catch((e: unknown) => w.log(`/${interaction.commandName} (sulk) failed: ${String(e)}`));
     } else if (interaction.isChatInputCommand()) {
       void command(interaction, w).catch(async (e: unknown) => {
         w.log(`/${interaction.commandName} failed: ${String(e)}`);
@@ -147,7 +154,9 @@ export async function connect(w: Wiring): Promise<Client> {
   });
 
   const rest = new REST().setToken(w.config.discordToken);
-  await rest.put(Routes.applicationGuildCommands(w.config.appId, w.config.guildId), { body: buildCommands(w.config.sheets) });
+  await rest.put(Routes.applicationGuildCommands(w.config.appId, w.config.guildId), {
+    body: [...buildCommands(w.config.sheets), fuckoffCommand.toJSON()],
+  });
   await client.login(w.config.discordToken);
   return client;
 }
@@ -164,6 +173,32 @@ async function autocomplete(interaction: AutocompleteInteraction, w: Wiring): Pr
   await interaction
     .respond(suggestMembers(cached, typed).map((n) => ({ name: n, value: n })))
     .catch(() => undefined);
+}
+
+/** True while Carlos sulks and the asker is LittleGrayFoxy. */
+function sulking(interaction: ChatInputCommandInteraction, w: Wiring): boolean {
+  return sulk.left(Date.now()) > 0 && isOwner(w.upload.memberOf(interaction.user.id));
+}
+
+/**
+ * /fuckoff and LittleGrayFoxy's commands while Carlos sulks. LittleGrayFoxy sends Carlos away (a line in the
+ * channel); while Carlos is gone, LittleGrayFoxy gets only a private snub. Anyone else gets a polite no.
+ */
+async function fuckoff(interaction: ChatInputCommandInteraction, w: Wiring): Promise<void> {
+  const now = Date.now();
+  const left = sulk.left(now);
+  if (!isOwner(w.upload.memberOf(interaction.user.id))) {
+    await interaction.reply({ content: pick(NOT_YOURS), flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+    return;
+  }
+  if (left > 0) {
+    const line = interaction.commandName === FUCKOFF ? ALREADY_GONE : pick(SNUBS);
+    await interaction.reply({ content: fill(line, left), flags: MessageFlags.Ephemeral, allowedMentions: NO_PINGS });
+    return;
+  }
+  sulk.start(now);
+  w.log(`Carlos sulks for 5 minutes (/fuckoff by ${interaction.user.id}).`);
+  await interaction.reply({ content: pick(LEAVING), allowedMentions: NO_PINGS });
 }
 
 /** Commands whose answer only the asker sees: linking, private screenshots, overlay keys and leadership. */
